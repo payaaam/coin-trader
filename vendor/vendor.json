@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "ZxUWoSbC1ZEFX38YlJ2Ws1zdLn8=",
+			"path": "github.com/toorop/go-bittrex",
+			"revision": "8010de6d169057bcadead25db813697ef42ba1c8",
+			"revisionTime": "2017-12-08T07:50:53Z"
+		}
+	],
+	"rootPath": "github.com/payaaam/coin-trader"
+}
