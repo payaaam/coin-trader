@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "4nhXt+svWtwsjFzQMbBywcykuEo=",
+			"path": "github.com/shopspring/decimal",
+			"revision": "9ca7f51822d222ae4e246f070f9aad863599bd1a",
+			"revisionTime": "2017-11-08T22:52:54Z"
+		},
+		{
+			"checksumSHA1": "ZOVI3VXoNknVPeRm8u+/hdf+XGA=",
+			"path": "github.com/sirupsen/logrus",
+			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
+			"revisionTime": "2016-08-29T20:23:21Z"
+		},
+		{
 			"checksumSHA1": "ZxUWoSbC1ZEFX38YlJ2Ws1zdLn8=",
 			"path": "github.com/toorop/go-bittrex",
 			"revision": "8010de6d169057bcadead25db813697ef42ba1c8",
