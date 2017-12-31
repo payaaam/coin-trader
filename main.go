@@ -10,7 +10,7 @@ import (
 const (
 	TenkanPeriod       = 20
 	KijunPeriod        = 60
-	SenkouAPerioud     = 120
+	SenkouBPeriod      = 120
 	CloudLeadingPeriod = 30
 )
 
@@ -74,11 +74,6 @@ func getCandles(bittrex *bittrex.Bittrex) {
 			SenkouB: getSenkouB(candles, day),
 		}
 
-		/*
-			log.Infof("Day: %v", senkouPlotDay)
-			log.Infof("Cloud: %v", cloudMap[senkouPlotDay])
-		*/
-
 		if cloudMap[day] != nil {
 			//senkouA := cloudMap[day].SenkouA
 			log.Infof("SenkouA: %v", cloudMap[day].SenkouA)
@@ -91,72 +86,44 @@ func getCandles(bittrex *bittrex.Bittrex) {
 	}
 }
 
-func getTenkan(candles []bittrex.Candle, day int) decimal.Decimal {
+func getHighLowMovingAverage(candles []bittrex.Candle, day int, period int) decimal.Decimal {
 	zero, _ := decimal.NewFromString("0")
-	if day < TenkanPeriod || len(candles) < TenkanPeriod {
+	if day < period || len(candles) < period {
 		return zero
 	}
 
 	var high decimal.Decimal = candles[day].High
 	var low decimal.Decimal = candles[day].Low
 
-	dayStop := day - (TenkanPeriod - 1)
+	dayStop := day - (period - 1)
 	if dayStop < 0 {
 		panic("SOMETHING WENT WRONG")
 	}
 
 	for i := day; i >= dayStop; i-- {
 		candle := candles[i]
-		//log.Info(i)
 
 		if candle.High.GreaterThan(high) {
 			high = candle.High
 		}
 
-		// Test Low
 		if candle.Low.LessThan(low) {
 			low = candle.Low
 		}
 	}
 
 	two, _ := decimal.NewFromString("2")
-	// 20 periods
-	// Highest High + Lowest Low / 2
 	return high.Add(low).Div(two)
 }
 
+// 20-day High + 20-day Low / 2
+func getTenkan(candles []bittrex.Candle, day int) decimal.Decimal {
+	return getHighLowMovingAverage(candles, day, TenkanPeriod)
+}
+
+// 60-day High + 60-day Low / 2
 func getKijun(candles []bittrex.Candle, day int) decimal.Decimal {
-	zero, _ := decimal.NewFromString("0")
-	if day < KijunPeriod || len(candles) < KijunPeriod {
-		return zero
-	}
-
-	var high decimal.Decimal = candles[day].High
-	var low decimal.Decimal = candles[day].Low
-
-	dayStop := day - (KijunPeriod - 1)
-	if dayStop < 0 {
-		panic("SOMETHING WENT WRONG")
-	}
-
-	for i := day; i >= dayStop; i-- {
-		candle := candles[i]
-		//log.Info(i)
-
-		if candle.High.GreaterThan(high) {
-			high = candle.High
-		}
-
-		// Test Low
-		if candle.Low.LessThan(low) {
-			low = candle.Low
-		}
-	}
-
-	two, _ := decimal.NewFromString("2")
-	// 20 periods
-	// Highest High + Lowest Low / 2
-	return high.Add(low).Div(two)
+	return getHighLowMovingAverage(candles, day, KijunPeriod)
 }
 
 // (Tenkan-sen + Kijun-sen) / 2
@@ -165,40 +132,9 @@ func getSenkouA(tenkan decimal.Decimal, kijun decimal.Decimal) decimal.Decimal {
 	return tenkan.Add(kijun).Div(two)
 }
 
-//(120-day high + 120-day low) / 2
+// 120-day High + 120-day Low / 2
 func getSenkouB(candles []bittrex.Candle, day int) decimal.Decimal {
-
-	zero, _ := decimal.NewFromString("0")
-	if day < SenkouAPerioud || len(candles) < SenkouAPerioud {
-		return zero
-	}
-
-	var high decimal.Decimal = candles[day].High
-	var low decimal.Decimal = candles[day].Low
-
-	dayStop := day - (SenkouAPerioud - 1)
-	if dayStop < 0 {
-		panic("SOMETHING WENT WRONG")
-	}
-
-	for i := day; i >= dayStop; i-- {
-		candle := candles[i]
-		//log.Info(i)
-
-		if candle.High.GreaterThan(high) {
-			high = candle.High
-		}
-
-		// Test Low
-		if candle.Low.LessThan(low) {
-			low = candle.Low
-		}
-	}
-
-	two, _ := decimal.NewFromString("2")
-	// 20 periods
-	// Highest High + Lowest Low / 2
-	return high.Add(low).Div(two)
+	return getHighLowMovingAverage(candles, day, SenkouBPeriod)
 }
 
 func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
