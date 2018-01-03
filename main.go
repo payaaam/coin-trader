@@ -2,30 +2,17 @@ package main
 
 import (
 	"github.com/payaaam/coin-trader/exchanges"
-	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/toorop/go-bittrex"
 	"os"
 )
 
-const (
-	TenkanPeriod       = 20
-	KijunPeriod        = 60
-	SenkouBPeriod      = 120
-	CloudLeadingPeriod = 30
-)
-
-type Cloud struct {
-	SenkouA decimal.Decimal
-	SenkouB decimal.Decimal
-}
-
 func main() {
-	API_KEY := os.Getenv("API_KEY")
-	API_SECRET := os.Getenv("API_SECRET")
+	BittrexApiKey := os.Getenv("BITTREX_API_KEY")
+	BittrexApiSecret := os.Getenv("BITTREX_API_SECRET")
 
 	// Bittrex client
-	bittrex := bittrex.New(API_KEY, API_SECRET)
+	bittrex := bittrex.New(BittrexApiKey, BittrexApiSecret)
 
 	bittrexClient := exchanges.NewClient(bittrex)
 
