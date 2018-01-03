@@ -83,6 +83,10 @@ func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*Clo
 	return chart, nil
 }
 
+func (c *CloudChart) GetCandles() []*Candle {
+	return c.candles
+}
+
 func (c *CloudChart) SetCloudPoint(day int, cloud *CloudPoint) {
 	c.Cloud[day+CloudLeadingPeriod] = cloud
 }

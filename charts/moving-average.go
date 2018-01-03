@@ -39,9 +39,8 @@ func (m *MovingAverage) Avg() decimal.Decimal {
 		return zero
 	}
 
-	var high decimal.Decimal = m.values[0].high
-	var low decimal.Decimal = m.values[0].low
-
+	var high = m.values[0].high
+	var low = m.values[0].low
 	for _, value := range m.values {
 
 		if value.high.GreaterThan(high) {
