@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "x77xUarDfVxctJMAJPCQzlYk8JM=",
+			"path": "github.com/fatih/color",
+			"revision": "bf82308e8c8546dc2b945157173eb8a959ae9505",
+			"revisionTime": "2016-10-25T12:05:01Z"
+		},
+		{
 			"checksumSHA1": "4nhXt+svWtwsjFzQMbBywcykuEo=",
 			"path": "github.com/shopspring/decimal",
 			"revision": "9ca7f51822d222ae4e246f070f9aad863599bd1a",

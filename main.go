@@ -33,6 +33,6 @@ func main() {
 
 		chart.PrintSummary()
 
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 	}
 }

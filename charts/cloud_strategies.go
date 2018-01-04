@@ -50,5 +50,9 @@ func findIntersection(currentCandle *Candle, previousCandle *Candle) decimal.Dec
 	num := previousCandle.Kijun.Sub(previousCandle.Tenkan)
 	denom := tenkanSlope.Sub(kijunSlope)
 
+	if denom.Equals(zero) {
+		return zero
+	}
+
 	return num.Div(denom)
 }

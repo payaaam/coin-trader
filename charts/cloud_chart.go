@@ -2,6 +2,8 @@ package charts
 
 import (
 	"errors"
+	"fmt"
+	"github.com/fatih/color"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -125,35 +127,85 @@ func (c *CloudChart) GetLastCandle() *Candle {
 }
 
 func (c *CloudChart) PrintSummary() {
-	log.Infof("Market: %s", c.Market)
+	green := color.New(color.FgGreen).SprintFunc()
+	red := color.New(color.FgRed).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+	three, _ := decimal.NewFromString("3")
+	negThree, _ := decimal.NewFromString("-3")
+	hundred, _ := decimal.NewFromString("100")
 
-	log.Info("--- Summary ----")
+	boldBlue := color.New(color.FgBlue, color.Bold)
+	boldBlue.Printf("Market: %s\n", c.Market)
+
+	color.White("--- Summary ----")
 
 	candle := c.GetLastCandle()
+	var tkOrientation string
 	if candle.Tenkan.GreaterThan(candle.Kijun) {
-		log.Info("Tenkan Over Kijun")
+		tkOrientation = green("Tenkan Over Kijun")
 	} else {
-		log.Info("Kijun Over Tenkan")
+		tkOrientation = red("Kijun Over Tenkan")
 	}
+	fmt.Printf("TK Orientation:        %s\n", tkOrientation)
 
 	cloud, err := c.GetCloud(candle.Day)
 	if err == nil {
-		log.Infof("Cloud Color: %s", cloud.Color)
+		var cc string
+		if cloud.Color == "RED" {
+			cc = red(cloud.Color)
+		} else if cloud.Color == "GREEN" {
+			cc = green(cloud.Color)
+		} else {
+			cc = yellow(cloud.Color)
+		}
+		fmt.Printf("Cloud Color:           %s\n", cc)
 	}
 
 	lastCross := FindLastTKCross(c)
-	log.Infof("Last TK Cross Date: %v", lastCross)
+	daysSinceLastCross := getDaysSinceLastCross(lastCross)
+
+	if daysSinceLastCross < 4 {
+		fmt.Printf("Last TK Cross Date:    %v\n", green(lastCross))
+		fmt.Printf("Days Since Last Cross: %v\n", green(daysSinceLastCross))
+	} else if daysSinceLastCross < 6 {
+		fmt.Printf("Last TK Cross Date:    %v\n", yellow(lastCross))
+		fmt.Printf("Days Since Last Cross: %v\n", yellow(daysSinceLastCross))
+	} else {
+		fmt.Printf("Last TK Cross Date:    %v\n", red(lastCross))
+		fmt.Printf("Days Since Last Cross: %v\n", red(daysSinceLastCross))
+	}
 
 	nextCross := FindNextTKCross(c)
-	log.Infof("Next TK Cross: %v", nextCross)
+	var nc string
+	if nextCross.LessThan(three) && nextCross.GreaterThan(negThree) {
+		nc = green(nextCross)
+	} else {
+		nc = red(nextCross)
+	}
+	fmt.Printf("Next TK Cross:         %v\n", nc)
 
-	log.Info("--- Candle ----")
-	log.Infof("TimeStamp: %v", candle.TimeStamp)
-	log.Infof("Open: %v", candle.Open)
-	log.Infof("Close: %v", candle.Close)
-	log.Infof("Tenkan: %v", candle.Tenkan)
-	log.Infof("Kijun: %v", candle.Kijun)
-	log.Info()
+	dayChange := candle.Close.Sub(candle.Open)
+	percentChange := dayChange.Div(candle.Open).Mul(hundred).Round(2)
+	pcString := fmt.Sprintf("%s%%", percentChange)
+	var dc string
+	var pc string
+	if dayChange.Sign() == 1 {
+		dc = green(dayChange)
+		pc = green(pcString)
+	} else {
+		dc = red(dayChange)
+		pc = red(pcString)
+	}
+	fmt.Printf("Change:                %s\n", pc)
+	fmt.Printf("Price Change:          %s\n", dc)
+
+	fmt.Println("\n--- Candle ----")
+	fmt.Printf("TimeStamp: %v\n", candle.TimeStamp)
+	fmt.Printf("Open: %v\n", candle.Open)
+	fmt.Printf("Close: %v\n", candle.Close)
+	fmt.Printf("Tenkan: %v\n", candle.Tenkan)
+	fmt.Printf("Kijun: %v\n", candle.Kijun)
+	fmt.Println()
 }
 
 func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
@@ -175,4 +227,10 @@ func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
 	}
 
 	return "N/A"
+}
+
+func getDaysSinceLastCross(lc time.Time) int {
+	now := time.Now()
+	diff := now.Sub(lc)
+	return int(diff.Hours() / 24)
 }
