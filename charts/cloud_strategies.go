@@ -1,14 +1,15 @@
-package strategies
+package charts
 
 import (
-	"github.com/payaaam/coin-trader/charts"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
+	//log "github.com/sirupsen/logrus"
+	"time"
 )
 
-func FindTKCrosses(chart *charts.CloudChart) {
+func FindLastTKCross(chart *CloudChart) time.Time {
 	candles := chart.GetCandles()
 	chartLength := len(candles) - 1
+	var lastTime time.Time
 	for day, candle := range candles {
 		if day+1 == chartLength {
 			break
@@ -19,27 +20,22 @@ func FindTKCrosses(chart *charts.CloudChart) {
 		nextDiff := nextCandle.Tenkan.Sub(nextCandle.Kijun)
 
 		if currentDiff.Sign() != nextDiff.Sign() {
-			log.Infof("Timestamp: %v", candle.TimeStamp)
-			previousCandle := candles[day-1]
-			tSlope := candle.Tenkan.Sub(previousCandle.Tenkan)
-			kSlope := candle.Kijun.Sub(previousCandle.Kijun)
-			log.Infof("TenkanSlope: %v", tSlope)
-			log.Infof("KijunSlope: %v", kSlope)
+			lastTime = candle.TimeStamp
 		}
 	}
+	return lastTime
 }
 
-func FindNextTKCross(chart *charts.CloudChart) {
+func FindNextTKCross(chart *CloudChart) decimal.Decimal {
 	candles := chart.GetCandles()
 	chartLength := len(candles) - 1
 	lastCandle := candles[chartLength]
 	secondToLast := candles[chartLength-1]
 
-	numOfPeriods := findIntersection(lastCandle, secondToLast)
-	log.Infof("Cross in: %v", numOfPeriods)
+	return findIntersection(lastCandle, secondToLast)
 }
 
-func findIntersection(currentCandle *charts.Candle, previousCandle *charts.Candle) decimal.Decimal {
+func findIntersection(currentCandle *Candle, previousCandle *Candle) decimal.Decimal {
 	zero, _ := decimal.NewFromString("0")
 	tenkanSlope := currentCandle.Tenkan.Sub(previousCandle.Tenkan)
 	kijunSlope := currentCandle.Kijun.Sub(previousCandle.Kijun)

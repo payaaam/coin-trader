@@ -7,6 +7,13 @@ import (
 	"io/ioutil"
 )
 
+/*
+	localBittrexClient := exchanges.NewLocalClient()
+	chart, err := localBittrexClient.GetCandles(JSONPath, "BTC-ETH")
+	if err != nil {
+		panic(err)
+	}
+*/
 type BittrexLocalClient struct{}
 
 func NewLocalClient() *BittrexLocalClient {

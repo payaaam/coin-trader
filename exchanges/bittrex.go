@@ -36,3 +36,23 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) (*c
 
 	return charts.NewCloudChart(chartCandles, tradingPair, "Bittrex")
 }
+
+func (b *BittrexClient) GetMarkets() ([]*Market, error) {
+	markets, err := b.client.GetMarkets()
+	if err != nil {
+		return nil, err
+	}
+
+	var bittrexMarkets []*Market
+	for _, market := range markets {
+		if market.BaseCurrency == "BTC" {
+			bittrexMarkets = append(bittrexMarkets, &Market{
+				TradingPair:    market.MarketName,
+				BaseCurrency:   market.BaseCurrency,
+				MarketCurrency: market.MarketCurrency,
+			})
+		}
+	}
+
+	return bittrexMarkets, nil
+}

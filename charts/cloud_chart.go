@@ -42,6 +42,7 @@ func NewCloudPoint(tenkan decimal.Decimal, kijun decimal.Decimal, senkouB decima
 		SenkouA:      senkouA,
 		SenkouB:      senkouB,
 		Displacement: displacement,
+		Color:        getCloudColor(senkouA, senkouB),
 	}
 }
 
@@ -116,4 +117,62 @@ func (c *CloudChart) Print() {
 
 		log.Info()
 	}
+}
+
+func (c *CloudChart) GetLastCandle() *Candle {
+	lastCandleIndex := len(c.candles) - 1
+	return c.candles[lastCandleIndex]
+}
+
+func (c *CloudChart) PrintSummary() {
+	log.Infof("Market: %s", c.Market)
+
+	log.Info("--- Summary ----")
+
+	candle := c.GetLastCandle()
+	if candle.Tenkan.GreaterThan(candle.Kijun) {
+		log.Info("Tenkan Over Kijun")
+	} else {
+		log.Info("Kijun Over Tenkan")
+	}
+
+	cloud, err := c.GetCloud(candle.Day)
+	if err == nil {
+		log.Infof("Cloud Color: %s", cloud.Color)
+	}
+
+	lastCross := FindLastTKCross(c)
+	log.Infof("Last TK Cross Date: %v", lastCross)
+
+	nextCross := FindNextTKCross(c)
+	log.Infof("Next TK Cross: %v", nextCross)
+
+	log.Info("--- Candle ----")
+	log.Infof("TimeStamp: %v", candle.TimeStamp)
+	log.Infof("Open: %v", candle.Open)
+	log.Infof("Close: %v", candle.Close)
+	log.Infof("Tenkan: %v", candle.Tenkan)
+	log.Infof("Kijun: %v", candle.Kijun)
+	log.Info()
+}
+
+func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
+	zero, _ := decimal.NewFromString("0")
+	if senkouB.Equals(zero) {
+		return "N/A"
+	}
+
+	if senkouA.GreaterThan(senkouB) {
+		return "GREEN"
+	}
+
+	if senkouB.GreaterThan(senkouA) {
+		return "RED"
+	}
+
+	if senkouA.Equals(senkouB) {
+		return "NONE"
+	}
+
+	return "N/A"
 }
