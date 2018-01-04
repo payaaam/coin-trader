@@ -20,12 +20,12 @@ export PATH=$PATH:$GOROOT/bin
 
 ## Bittrex
 
-*Create an API Key on Bittrex*
+**Create an API Key**
 
 Navigate to [Bittrex Settings](https://bittrex.com/Manage#sectionApi)
 
 
 **Run**
 
-`BITTREX_API_KEY={{ API_KEY }} BITTREX_API_SECRET={{ API_SECRET }} go run main.go`
+`$ BITTREX_API_KEY={{ API_KEY }} BITTREX_API_SECRET={{ API_SECRET }} go run main.go`
 
