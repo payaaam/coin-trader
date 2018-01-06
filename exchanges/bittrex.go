@@ -15,7 +15,7 @@ func NewClient(client *bittrex.Bittrex) *BittrexClient {
 	}
 }
 
-func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) (*charts.CloudChart, error) {
+func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) ([]*charts.Candle, error) {
 	candles, err := b.client.GetTicks(tradingPair, chartInterval)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) (*c
 		})
 	}
 
-	return charts.NewCloudChart(chartCandles, tradingPair, "Bittrex")
+	return chartCandles, nil
 }
 
 func (b *BittrexClient) GetMarkets() ([]*Market, error) {
