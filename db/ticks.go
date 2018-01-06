@@ -16,6 +16,10 @@ func NewTickStore(db *sql.DB) *TickStore {
 	}
 }
 
+func (t *TickStore) Upsert(ctx context.Context, tick *models.Tick) error {
+	return tick.Upsert(t.db, true, []string{"chart_id", "timestamp"}, []string{"open", "close", "high", "low"})
+}
+
 func (t *TickStore) Save(ctx context.Context, tick *models.Tick) error {
 	return tick.Insert(t.db)
 }

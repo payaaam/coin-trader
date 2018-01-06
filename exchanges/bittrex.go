@@ -37,6 +37,28 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) ([]
 	return chartCandles, nil
 }
 
+func (b *BittrexClient) GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error) {
+	candles, err := b.client.GetLatestTick(tradingPair, chartInterval)
+	if err != nil {
+		return nil, err
+	}
+
+	var chartCandles []*charts.Candle
+	for day, candle := range candles {
+		chartCandles = append(chartCandles, &charts.Candle{
+			TimeStamp: candle.TimeStamp.Time,
+			Day:       day,
+			Open:      candle.Open,
+			Close:     candle.Close,
+			High:      candle.High,
+			Low:       candle.Low,
+			Volume:    candle.Volume,
+		})
+	}
+
+	return chartCandles[0], nil
+}
+
 func (b *BittrexClient) GetMarkets() ([]*Market, error) {
 	markets, err := b.client.GetMarkets()
 	if err != nil {

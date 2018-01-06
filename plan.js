@@ -23,3 +23,18 @@ GetMarketPairs
 ExecuteLimitTrade
 ExecutLimitSell
 GetHoldings
+
+
+// Get All Ticks for each symbol
+
+For Each symbol,
+Get All Ticks and store to Databse
+
+
+On Interval
+ - Get 1D
+
+
+ At Interval
+ - Pull last 120 periods and figure out Cloud
+ - If looks good, send email, text, post message somewhere

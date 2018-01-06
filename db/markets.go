@@ -17,6 +17,10 @@ func NewMarketStore(db *sql.DB) *MarketStore {
 	}
 }
 
+func (m *MarketStore) Upsert(ctx context.Context, market *models.Market) error {
+	return market.Upsert(m.db, true, []string{"exchange_name", "market_key"}, []string{"market_key"})
+}
+
 func (m *MarketStore) Save(ctx context.Context, market *models.Market) error {
 	return market.Insert(m.db)
 }
