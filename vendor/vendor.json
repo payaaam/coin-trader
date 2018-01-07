@@ -27,6 +27,12 @@
 			"revisionTime": "2017-12-08T07:50:53Z"
 		},
 		{
+			"checksumSHA1": "K/CP3EBR0TUpw8DPpjRExGEYNkY=",
+			"path": "github.com/urfave/cli",
+			"revision": "ab403a54a148f2d857920810291539e1f817ee7b",
+			"revisionTime": "2017-04-24T21:31:22Z"
+		},
+		{
 			"checksumSHA1": "5Ar/CuQ353wVjRS94OgxoUfdE4c=",
 			"path": "github.com/volatiletech/sqlboiler",
 			"revision": "86c580f53724a794e2f807707653f480616d455d",

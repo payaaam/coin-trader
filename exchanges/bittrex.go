@@ -69,9 +69,11 @@ func (b *BittrexClient) GetMarkets() ([]*Market, error) {
 	for _, market := range markets {
 		if market.BaseCurrency == "BTC" {
 			bittrexMarkets = append(bittrexMarkets, &Market{
-				TradingPair:    market.MarketName,
-				BaseCurrency:   market.BaseCurrency,
-				MarketCurrency: market.MarketCurrency,
+				MarketKey:          market.MarketName,
+				BaseCurrency:       market.BaseCurrency,
+				MarketCurrency:     market.MarketCurrency,
+				BaseCurrencyName:   market.BaseCurrencyLong,
+				MarketCurrencyName: market.MarketCurrencyLong,
 			})
 		}
 	}

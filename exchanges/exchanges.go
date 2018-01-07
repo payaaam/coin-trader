@@ -12,9 +12,12 @@ type Exchange interface {
 }
 
 type Market struct {
-	TradingPair    string
-	BaseCurrency   string
-	MarketCurrency string
+	ExchangeName       string
+	MarketKey          string
+	BaseCurrency       string
+	BaseCurrencyName   string
+	MarketCurrency     string
+	MarketCurrencyName string
 }
 
 var Intervals = map[string]map[string]string{

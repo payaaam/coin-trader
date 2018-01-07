@@ -25,6 +25,18 @@ func (m *MarketStore) Save(ctx context.Context, market *models.Market) error {
 	return market.Insert(m.db)
 }
 
+func (m *MarketStore) GetMarkets(ctx context.Context, exchange string) ([]*models.Market, error) {
+	markets, err := models.Markets(m.db,
+		qm.Where("exchange_name=?", exchange),
+	).All()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return markets, nil
+}
+
 func (m *MarketStore) GetMarket(ctx context.Context, marketName string, marketKey string) (*models.Market, error) {
 	market, err := models.Markets(m.db,
 		qm.Where("market_name=?", marketName),
