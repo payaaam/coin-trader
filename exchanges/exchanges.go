@@ -22,8 +22,12 @@ type Market struct {
 
 var Intervals = map[string]map[string]string{
 	"bittrex": map[string]string{
-		"thirtyMin": db.ThirtyMinuteInterval,
-		"hour":      db.OneDayInterval,
-		"day":       db.OneDayInterval,
+		db.ThirtyMinuteInterval: "thirtyMin",
+		db.OneDayInterval:       "hour",
+		db.OneDayInterval:       "day",
 	},
+}
+
+var ValidExchanges = map[string]bool{
+	"bittrex": true,
 }

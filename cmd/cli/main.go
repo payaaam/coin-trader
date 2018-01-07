@@ -1,6 +1,12 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
+	_ "github.com/lib/pq"
+	"github.com/payaaam/coin-trader/db"
+	"github.com/payaaam/coin-trader/exchanges"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"os"
 )
@@ -33,7 +39,53 @@ func main() {
 			Name:  "setup",
 			Usage: "Initalizes the database",
 			Action: func(c *cli.Context) error {
-				SetupExchange(exchange, interval)
+				if exchanges.ValidExchanges[exchange] != true {
+					log.Error(errors.New("Not a valid exchange"))
+				}
+
+				if db.ValidIntervals[interval] != true {
+					log.Error(errors.New("Not a valid exchange interval"))
+				}
+
+				config := NewConfig()
+				postgres, err := sql.Open("postgres", config.PostgresConn)
+				if err != nil {
+					panic(err)
+				}
+
+				marketStore := db.NewMarketStore(postgres)
+				chartStore := db.NewChartStore(postgres)
+				tickStore := db.NewTickStore(postgres)
+
+				setupCommand := NewSetupCommand(config, marketStore, chartStore, tickStore)
+				setupCommand.Run(exchange, interval)
+				return nil
+			},
+		},
+		{
+			Name:  "trader",
+			Usage: "makes you money $$$$",
+			Action: func(c *cli.Context) error {
+				if exchanges.ValidExchanges[exchange] != true {
+					log.Error(errors.New("Not a valid exchange"))
+				}
+
+				if db.ValidIntervals[interval] != true {
+					log.Error(errors.New("Not a valid exchange interval"))
+				}
+
+				config := NewConfig()
+				postgres, err := sql.Open("postgres", config.PostgresConn)
+				if err != nil {
+					panic(err)
+				}
+
+				marketStore := db.NewMarketStore(postgres)
+				chartStore := db.NewChartStore(postgres)
+				tickStore := db.NewTickStore(postgres)
+
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore)
+				traderCommand.Run(exchange, interval)
 				return nil
 			},
 		},
