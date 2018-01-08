@@ -115,18 +115,7 @@ func (s *SetupCommand) loadTicks(ctx context.Context, chartID int, marketKey str
 	}
 
 	for _, candle := range candles {
-		tick := &models.Tick{
-			ChartID:   chartID,
-			Open:      candle.Open.String(),
-			Close:     candle.Close.String(),
-			High:      candle.High.String(),
-			Low:       candle.Low.String(),
-			Volume:    candle.Volume.String(),
-			Timestamp: candle.TimeStamp.Unix(),
-			Day:       candle.Day,
-		}
-
-		err := s.tickStore.Upsert(ctx, tick)
+		err := s.tickStore.Upsert(ctx, chartID, candle)
 		if err != nil {
 			return err
 		}

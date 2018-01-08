@@ -24,7 +24,7 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) ([]
 	var chartCandles []*charts.Candle
 	for day, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
-			TimeStamp: candle.TimeStamp.Time,
+			TimeStamp: candle.TimeStamp.Time.Unix(),
 			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,
@@ -46,7 +46,7 @@ func (b *BittrexClient) GetLatestCandle(tradingPair string, chartInterval string
 	var chartCandles []*charts.Candle
 	for day, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
-			TimeStamp: candle.TimeStamp.Time,
+			TimeStamp: candle.TimeStamp.Time.Unix(),
 			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,

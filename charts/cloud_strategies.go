@@ -3,13 +3,13 @@ package charts
 import (
 	"github.com/shopspring/decimal"
 	//log "github.com/sirupsen/logrus"
-	"time"
+	//"time"
 )
 
-func FindLastTKCross(chart *CloudChart) time.Time {
+func FindLastTKCross(chart *CloudChart) int64 {
 	candles := chart.GetCandles()
 	chartLength := len(candles) - 1
-	var lastTime time.Time
+	var lastTime int64
 	for day, candle := range candles {
 		if day+1 == chartLength {
 			break
