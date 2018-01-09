@@ -21,7 +21,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- Name: tick; Type: TABLE; Schema: public; Owner: payam
+-- Name: tick; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE tick (
@@ -37,10 +37,10 @@ CREATE TABLE tick (
 );
 
 
-ALTER TABLE tick OWNER TO payam;
+ALTER TABLE tick OWNER TO postgres;
 
 --
--- Name: tick_id_seq; Type: SEQUENCE; Schema: public; Owner: payam
+-- Name: tick_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE tick_id_seq
@@ -51,24 +51,24 @@ CREATE SEQUENCE tick_id_seq
     CACHE 1;
 
 
-ALTER TABLE tick_id_seq OWNER TO payam;
+ALTER TABLE tick_id_seq OWNER TO postgres;
 
 --
--- Name: tick_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: payam
+-- Name: tick_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE tick_id_seq OWNED BY tick.id;
 
 
 --
--- Name: tick id; Type: DEFAULT; Schema: public; Owner: payam
+-- Name: tick id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY tick ALTER COLUMN id SET DEFAULT nextval('tick_id_seq'::regclass);
 
 
 --
--- Name: tick tick_pkey; Type: CONSTRAINT; Schema: public; Owner: payam
+-- Name: tick tick_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY tick
@@ -76,21 +76,21 @@ ALTER TABLE ONLY tick
 
 
 --
--- Name: chart_id_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: chart_id_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX chart_id_idx ON tick USING btree (chart_id);
 
 
 --
--- Name: chart_id_timestamp_uniq_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: chart_id_timestamp_uniq_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX chart_id_timestamp_uniq_idx ON tick USING btree (chart_id, "timestamp");
 
 
 --
--- Name: tick chart_fk; Type: FK CONSTRAINT; Schema: public; Owner: payam
+-- Name: tick chart_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY tick

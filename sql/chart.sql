@@ -21,7 +21,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- Name: chart; Type: TABLE; Schema: public; Owner: payam
+-- Name: chart; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE chart (
@@ -31,10 +31,10 @@ CREATE TABLE chart (
 );
 
 
-ALTER TABLE chart OWNER TO payam;
+ALTER TABLE chart OWNER TO postgres;
 
 --
--- Name: chart_id_seq; Type: SEQUENCE; Schema: public; Owner: payam
+-- Name: chart_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE chart_id_seq
@@ -45,24 +45,24 @@ CREATE SEQUENCE chart_id_seq
     CACHE 1;
 
 
-ALTER TABLE chart_id_seq OWNER TO payam;
+ALTER TABLE chart_id_seq OWNER TO postgres;
 
 --
--- Name: chart_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: payam
+-- Name: chart_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE chart_id_seq OWNED BY chart.id;
 
 
 --
--- Name: chart id; Type: DEFAULT; Schema: public; Owner: payam
+-- Name: chart id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY chart ALTER COLUMN id SET DEFAULT nextval('chart_id_seq'::regclass);
 
 
 --
--- Name: chart chart_pkey; Type: CONSTRAINT; Schema: public; Owner: payam
+-- Name: chart chart_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY chart
@@ -70,28 +70,28 @@ ALTER TABLE ONLY chart
 
 
 --
--- Name: interval_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: interval_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX interval_idx ON chart USING btree ("interval");
 
 
 --
--- Name: market_id_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: market_id_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX market_id_idx ON chart USING btree (market_id);
 
 
 --
--- Name: market_interval_uniq_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: market_interval_uniq_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX market_interval_uniq_idx ON chart USING btree (market_id, "interval");
 
 
 --
--- Name: chart fk_market_id; Type: FK CONSTRAINT; Schema: public; Owner: payam
+-- Name: chart fk_market_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY chart
