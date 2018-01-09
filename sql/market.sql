@@ -21,7 +21,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- Name: market; Type: TABLE; Schema: public; Owner: payam
+-- Name: market; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE market (
@@ -35,10 +35,10 @@ CREATE TABLE market (
 );
 
 
-ALTER TABLE market OWNER TO payam;
+ALTER TABLE market OWNER TO postgres;
 
 --
--- Name: market_id_seq; Type: SEQUENCE; Schema: public; Owner: payam
+-- Name: market_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
 CREATE SEQUENCE market_id_seq
@@ -49,24 +49,24 @@ CREATE SEQUENCE market_id_seq
     CACHE 1;
 
 
-ALTER TABLE market_id_seq OWNER TO payam;
+ALTER TABLE market_id_seq OWNER TO postgres;
 
 --
--- Name: market_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: payam
+-- Name: market_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE market_id_seq OWNED BY market.id;
 
 
 --
--- Name: market id; Type: DEFAULT; Schema: public; Owner: payam
+-- Name: market id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY market ALTER COLUMN id SET DEFAULT nextval('market_id_seq'::regclass);
 
 
 --
--- Name: market market_pkey; Type: CONSTRAINT; Schema: public; Owner: payam
+-- Name: market market_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY market
@@ -74,35 +74,35 @@ ALTER TABLE ONLY market
 
 
 --
--- Name: base_currency_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: base_currency_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX base_currency_idx ON market USING btree (base_currency);
 
 
 --
--- Name: exchange_market_key_uniq_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: exchange_market_key_uniq_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX exchange_market_key_uniq_idx ON market USING btree (exchange_name, market_key);
 
 
 --
--- Name: exchange_name; Type: INDEX; Schema: public; Owner: payam
+-- Name: exchange_name; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX exchange_name ON market USING btree (exchange_name);
 
 
 --
--- Name: market_currency_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: market_currency_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX market_currency_idx ON market USING btree (market_currency);
 
 
 --
--- Name: market_key_idx; Type: INDEX; Schema: public; Owner: payam
+-- Name: market_key_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX market_key_idx ON market USING btree (market_key);
