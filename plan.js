@@ -87,3 +87,23 @@ On Interval
     }
    }
  }
+
+// Check Open positions
+if state.balances[neo] != "" {
+  data:= readGraph("neo")
+  if bearishTKCross() == true {
+    // Update balances
+    // Update Database
+
+    executeSell("neo")
+    // Tak eorder  and add it to open orders array
+  }
+}
+
+if state.balances[neo] == "" {
+  data:= readGraph("neo")
+  if bullishTKCross() == true {
+    executeBuy("neo")
+    // take order and add it to open orders aray
+  }
+}

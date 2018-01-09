@@ -17,38 +17,6 @@ const (
 	CloudLeadingPeriod = 30
 )
 
-type Candle struct {
-	TimeStamp int64
-	Day       int
-	Open      decimal.Decimal
-	Close     decimal.Decimal
-	High      decimal.Decimal
-	Low       decimal.Decimal
-	Volume    decimal.Decimal
-	Kijun     decimal.Decimal
-	Tenkan    decimal.Decimal
-}
-
-type CloudPoint struct {
-	SenkouA      decimal.Decimal
-	SenkouB      decimal.Decimal
-	Color        string
-	Displacement decimal.Decimal
-}
-
-func NewCloudPoint(tenkan decimal.Decimal, kijun decimal.Decimal, senkouB decimal.Decimal) *CloudPoint {
-	two, _ := decimal.NewFromString("2")
-	senkouA := tenkan.Add(kijun).Div(two)
-	displacement := senkouA.Sub(senkouB)
-
-	return &CloudPoint{
-		SenkouA:      senkouA,
-		SenkouB:      senkouB,
-		Displacement: displacement,
-		Color:        getCloudColor(senkouA, senkouB),
-	}
-}
-
 type CloudChart struct {
 	Market               string
 	Exchange             string

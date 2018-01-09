@@ -86,7 +86,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 
 			neoChart.PrintSummary()
 
-			if balance != utils.StringToDecimal("0") {
+			if balance != decimal.New(0) {
 				/*
 					chart := state.GetChart("btc-neo")
 					if shouldSell(chart) == true {
@@ -102,7 +102,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 				//return
 			}
 
-			if balance == utils.StringToDecimal("0") {
+			if balance == decimal.New(0) {
 				/*
 					chart := state.GetChart("btc-neo")
 					// check for TK cross
