@@ -4,7 +4,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
-	//"github.com/shopspring/decimal"
+	"github.com/shopspring/decimal"
 	//"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
@@ -86,7 +86,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 
 			neoChart.PrintSummary()
 
-			if balance != decimal.New(0) {
+			if balance != decimal.New(0, 0) {
 				/*
 					chart := state.GetChart("btc-neo")
 					if shouldSell(chart) == true {
@@ -102,7 +102,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 				//return
 			}
 
-			if balance == decimal.New(0) {
+			if balance == decimal.New(0, 0) {
 				/*
 					chart := state.GetChart("btc-neo")
 					// check for TK cross

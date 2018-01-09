@@ -1,4 +1,4 @@
-package
+package charts
 
 import (
 	"github.com/shopspring/decimal"
