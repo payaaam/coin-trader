@@ -6,8 +6,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	//"time"
 	"sort"
+	"time"
 )
 
 const (
@@ -93,6 +93,11 @@ func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*Clo
 }
 
 func (c *CloudChart) AddCandle(candle *Candle) {
+	if c.GetLastCandle().TimeStamp == candle.TimeStamp {
+		c.KijunMovingAverage.RemoveLast()
+		c.TenkanMovingAverage.RemoveLast()
+		c.SenkouBMovingAverage.RemoveLast()
+	}
 	c.KijunMovingAverage.Add(candle.High, candle.Low)
 	c.TenkanMovingAverage.Add(candle.High, candle.Low)
 	c.SenkouBMovingAverage.Add(candle.High, candle.Low)
@@ -250,10 +255,8 @@ func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
 
 func getDaysSinceLastCross(lc int64) int {
 
-	return 0
-	/*
-		now := time.Now().Unix()
-		diff := now.Sub(lc)
-		return int(diff.Hours() / 24)
-	*/
+	last := time.Unix(lc, 0)
+	now := time.Now()
+	diff := now.Sub(last)
+	return int(diff.Hours() / 24)
 }
