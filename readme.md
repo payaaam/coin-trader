@@ -68,6 +68,10 @@ Navigate to [Bittrex Settings](https://bittrex.com/Manage#sectionApi)
 
 ## Build
 
+**Download all the dependencies**
+`$ govendor sync`
+
+**Build Executable**
 `$ make cli`
 
 
