@@ -15,7 +15,7 @@ func NewClient(client *bittrex.Bittrex) *BittrexClient {
 	}
 }
 
-func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) (*charts.CloudChart, error) {
+func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) ([]*charts.Candle, error) {
 	candles, err := b.client.GetTicks(tradingPair, chartInterval)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) (*c
 	var chartCandles []*charts.Candle
 	for day, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
-			TimeStamp: candle.TimeStamp.Time,
+			TimeStamp: candle.TimeStamp.Time.Unix(),
 			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,
@@ -34,7 +34,29 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) (*c
 		})
 	}
 
-	return charts.NewCloudChart(chartCandles, tradingPair, "Bittrex")
+	return chartCandles, nil
+}
+
+func (b *BittrexClient) GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error) {
+	candles, err := b.client.GetLatestTick(tradingPair, chartInterval)
+	if err != nil {
+		return nil, err
+	}
+
+	var chartCandles []*charts.Candle
+	for day, candle := range candles {
+		chartCandles = append(chartCandles, &charts.Candle{
+			TimeStamp: candle.TimeStamp.Time.Unix(),
+			Day:       day,
+			Open:      candle.Open,
+			Close:     candle.Close,
+			High:      candle.High,
+			Low:       candle.Low,
+			Volume:    candle.Volume,
+		})
+	}
+
+	return chartCandles[0], nil
 }
 
 func (b *BittrexClient) GetMarkets() ([]*Market, error) {
@@ -47,9 +69,11 @@ func (b *BittrexClient) GetMarkets() ([]*Market, error) {
 	for _, market := range markets {
 		if market.BaseCurrency == "BTC" {
 			bittrexMarkets = append(bittrexMarkets, &Market{
-				TradingPair:    market.MarketName,
-				BaseCurrency:   market.BaseCurrency,
-				MarketCurrency: market.MarketCurrency,
+				MarketKey:          market.MarketName,
+				BaseCurrency:       market.BaseCurrency,
+				MarketCurrency:     market.MarketCurrency,
+				BaseCurrencyName:   market.BaseCurrencyLong,
+				MarketCurrencyName: market.MarketCurrencyLong,
 			})
 		}
 	}

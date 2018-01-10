@@ -11,29 +11,67 @@ $ brew install golang
 
 **Update your .bashrc / .bash_profile file**
 
+Add these lines to your `.bashrc` file.
+
 ```bash
-export GOPATH=$HOME/go-workspace # Change this to your go workspace.
-export GOROOT=/usr/local/opt/go/libexec # Location of your go installation
+export GOPATH=$HOME/{{ GO_WORKSPACE_DIR }} # Change this to your go workspace.
+export GOROOT=/usr/local/bin/go # Location of your go installation
 export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:$GOROOT/bin
 ```
 
-**Setup your environment**
+**Source your updated bash profile**
+
 ```bash
-$ mkdir -p $GOPATH $GOPATH/src $GOPATH/pkg $GOPATH/bin
-$ cd $GOPATH/src
-$ git clone https://github.com/payaaam/coin-trader.git
-$ go get
+$ source ~/.bash_profile
 ```
+
+**Install Postgres**
+
+1. Download [Postgres](https://postgresapp.com/)
+2. Download [Postico](https://eggerapps.at/postico/)
+3. Open Postgres App and `Initialize`
+4. Open Postico and connect with these settings...
+
+```
+Host: localhost
+Password: _empty_
+Port: 5432
+Database: postgres
+```
+
+**Setup DB**
+
+`$ make setup-db`
 
 ## Bittrex
 
 **Create an API Key**
 
+1. Create `./bittrex.env`
+2. Add the following lines...
+```bash
+export BITTREX_API_KEY="test"
+export BITTREX_API_SECRET="test"
+```
+3. Source the environment variables
+```bash
+source bittrex.env
+```
+
+
 Navigate to [Bittrex Settings](https://bittrex.com/Manage#sectionApi)
 
+## Build
 
-**Run**
+`$ make cli`
 
-`$ BITTREX_API_KEY={{ API_KEY }} BITTREX_API_SECRET={{ API_SECRET }} go run main.go`
+
+**Run Setup**
+
+`$ bin/cli setup`
+
+**Run Trading Bot**
+
+`$ bin/cli trader`
 

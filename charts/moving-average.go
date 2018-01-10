@@ -33,6 +33,13 @@ func (m *MovingAverage) Add(high decimal.Decimal, low decimal.Decimal) {
 	})
 }
 
+func (m *MovingAverage) RemoveLast() {
+	if len(m.values) == 0 {
+		return
+	}
+	m.values = m.values[:len(m.values)-1]
+}
+
 func (m *MovingAverage) Avg() decimal.Decimal {
 	zero, _ := decimal.NewFromString("0")
 	if len(m.values) != m.period {

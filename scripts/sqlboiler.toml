@@ -1,0 +1,6 @@
+[postgres]
+  dbname="coins"
+  host="localhost"
+  port=5432
+  user="postgres"
+  sslmode="disable"

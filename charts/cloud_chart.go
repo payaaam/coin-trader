@@ -6,6 +6,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
+	"sort"
 	"time"
 )
 
@@ -15,38 +16,6 @@ const (
 	SenkouBPeriod      = 120
 	CloudLeadingPeriod = 30
 )
-
-type Candle struct {
-	TimeStamp time.Time
-	Day       int
-	Open      decimal.Decimal
-	Close     decimal.Decimal
-	High      decimal.Decimal
-	Low       decimal.Decimal
-	Volume    decimal.Decimal
-	Kijun     decimal.Decimal
-	Tenkan    decimal.Decimal
-}
-
-type CloudPoint struct {
-	SenkouA      decimal.Decimal
-	SenkouB      decimal.Decimal
-	Color        string
-	Displacement decimal.Decimal
-}
-
-func NewCloudPoint(tenkan decimal.Decimal, kijun decimal.Decimal, senkouB decimal.Decimal) *CloudPoint {
-	two, _ := decimal.NewFromString("2")
-	senkouA := tenkan.Add(kijun).Div(two)
-	displacement := senkouA.Sub(senkouB)
-
-	return &CloudPoint{
-		SenkouA:      senkouA,
-		SenkouB:      senkouB,
-		Displacement: displacement,
-		Color:        getCloudColor(senkouA, senkouB),
-	}
-}
 
 type CloudChart struct {
 	Market               string
@@ -59,6 +28,11 @@ type CloudChart struct {
 }
 
 func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*CloudChart, error) {
+
+	sort.Slice(candles, func(i, j int) bool {
+		return candles[i].TimeStamp < candles[j].TimeStamp
+	})
+
 	chart := &CloudChart{
 		candles:              candles,
 		Market:               tradingPair,
@@ -84,6 +58,24 @@ func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*Clo
 	}
 
 	return chart, nil
+}
+
+func (c *CloudChart) AddCandle(candle *Candle) {
+	if c.GetLastCandle().TimeStamp == candle.TimeStamp {
+		c.KijunMovingAverage.RemoveLast()
+		c.TenkanMovingAverage.RemoveLast()
+		c.SenkouBMovingAverage.RemoveLast()
+	}
+	c.KijunMovingAverage.Add(candle.High, candle.Low)
+	c.TenkanMovingAverage.Add(candle.High, candle.Low)
+	c.SenkouBMovingAverage.Add(candle.High, candle.Low)
+
+	// Set Cloud
+	candle.Kijun = c.KijunMovingAverage.Avg()
+	candle.Tenkan = c.TenkanMovingAverage.Avg()
+	senkouB := c.SenkouBMovingAverage.Avg()
+	cloud := NewCloudPoint(candle.Tenkan, candle.Kijun, senkouB)
+	c.SetCloudPoint(candle.Day, cloud)
 }
 
 func (c *CloudChart) GetCandles() []*Candle {
@@ -229,8 +221,10 @@ func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
 	return "N/A"
 }
 
-func getDaysSinceLastCross(lc time.Time) int {
+func getDaysSinceLastCross(lc int64) int {
+
+	last := time.Unix(lc, 0)
 	now := time.Now()
-	diff := now.Sub(lc)
+	diff := now.Sub(last)
 	return int(diff.Hours() / 24)
 }

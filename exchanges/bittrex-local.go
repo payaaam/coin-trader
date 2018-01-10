@@ -16,11 +16,11 @@ import (
 */
 type BittrexLocalClient struct{}
 
-func NewLocalClient() *BittrexLocalClient {
+func NewBittrexLocalClient() *BittrexLocalClient {
 	return &BittrexLocalClient{}
 }
 
-func (b *BittrexLocalClient) GetCandles(path string, tradingPair string) (*charts.CloudChart, error) {
+func (b *BittrexLocalClient) GetCandles(path string, tradingPair string) ([]*charts.Candle, error) {
 
 	candles, err := readJSON(path)
 	if err != nil {
@@ -30,7 +30,7 @@ func (b *BittrexLocalClient) GetCandles(path string, tradingPair string) (*chart
 	var chartCandles []*charts.Candle
 	for day, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
-			TimeStamp: candle.TimeStamp.Time,
+			TimeStamp: candle.TimeStamp.Time.Unix(),
 			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,
@@ -40,7 +40,7 @@ func (b *BittrexLocalClient) GetCandles(path string, tradingPair string) (*chart
 		})
 	}
 
-	return charts.NewCloudChart(chartCandles, tradingPair, "Bittrex")
+	return chartCandles, nil
 }
 
 type jsonResponse struct {
