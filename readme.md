@@ -67,7 +67,11 @@ Navigate to [Bittrex Settings](https://bittrex.com/Manage#sectionApi)
 `$ make cli`
 
 
-**Run**
+**Run Setup**
 
-`$ BITTREX_API_KEY={{ API_KEY }} BITTREX_API_SECRET={{ API_SECRET }} go run main.go`
+`$ bin/cli setup`
+
+**Run Trading Bot**
+
+`$ bin/cli trader`
 
