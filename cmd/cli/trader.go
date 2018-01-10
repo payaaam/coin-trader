@@ -4,7 +4,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
-	"github.com/shopspring/decimal"
+	"github.com/payaaam/coin-trader/strategies"
 	//"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
@@ -63,6 +63,8 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 
 	state.SetChart("btc-neo", chart)
 
+	ichimokuCloudStrategy := strategies.NewCloudStrategy()
+
 	// Will ping
 	ticker := time.NewTicker(time.Second * TickerSeconds)
 	go func() {
@@ -75,7 +77,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 
 			neoChart := state.GetChart("btc-neo")
 			neoChart.AddCandle(candle)
-			err = t.tickStore.Upsert(ctx, 126, candle)
+			err = t.tickStore.Upsert(ctx, 1, candle)
 			if err != nil {
 				panic(err)
 			}
@@ -84,12 +86,12 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 
 			log.Infof("Balance: %v", balance)
 
-			neoChart.PrintSummary()
+			//neoChart.PrintSummary()
 
-			if balance != decimal.New(0, 0) {
-				/*
-					chart := state.GetChart("btc-neo")
-					if shouldSell(chart) == true {
+			if balance != utils.ZeroDecimal() {
+
+				if ichimokuCloudStrategy.ShouldSell(neoChart) == true {
+					/*
 						order := executeSell("neo", balance)
 						addOrderToActiveOrders()
 						updateBalance()
@@ -97,28 +99,27 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 						log.Infof("Selling NEO")
 						log.Infof("Amount: %v", amount)
 						log.Infof("Price: %v", price)
-					}
-				*/
-				//return
+					*/
+				}
 			}
 
-			if balance == decimal.New(0, 0) {
-				/*
-					chart := state.GetChart("btc-neo")
-					// check for TK cross
-					//  - Cloud Color
-					//  - Price in cloud
-					if shouldBuy(chart) == true {
-						order := executeBuy("neo", amount)
-						addOrderToActiveOrders()
-						updateBalance()
-						updateDatabase()
-						log.Infof("Purchased NEO")
-						log.Infof("Amount: %v", amount)
-						log.Infof("Price: %v", price)
-					}
-				*/
-				//return
+			if balance == utils.ZeroDecimal() {
+				if ichimokuCloudStrategy.ShouldBuy(chart) == true {
+					/*
+						// check for TK cross
+						//  - Cloud Color
+						//  - Price in cloud
+
+							order := executeBuy("neo", amount)
+							addOrderToActiveOrders()
+							updateBalance()
+							updateDatabase()
+							log.Infof("Purchased NEO")
+							log.Infof("Amount: %v", amount)
+							log.Infof("Price: %v", price)
+
+					*/
+				}
 			}
 		}
 	}()

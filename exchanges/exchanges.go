@@ -5,10 +5,10 @@ import (
 	"github.com/payaaam/coin-trader/db"
 )
 
+// All Exchanges must follow this interface
 type Exchange interface {
-	NewClient() *Exchange
-	GetBitcoinMarkets() []*Market
-	GetCandles(tradingPair string, interval string) (*charts.CloudChart, error)
+	GetBitcoinMarkets() ([]*Market, error)
+	GetCandles(tradingPair string, interval string) ([]*charts.Candle, error)
 }
 
 type Market struct {

@@ -50,9 +50,9 @@ func (s *SetupCommand) Run(exchange string, interval string) {
 	}
 }
 
-func (s *SetupCommand) loadMarkets(ctx context.Context, exchange string, client *exchanges.BittrexClient) error {
+func (s *SetupCommand) loadMarkets(ctx context.Context, exchange string, client exchanges.Exchange) error {
 	log.Debug("Loading Markets")
-	markets, err := client.GetMarkets()
+	markets, err := client.GetBitcoinMarkets()
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (s *SetupCommand) loadMarkets(ctx context.Context, exchange string, client 
 	return nil
 }
 
-func (s *SetupCommand) loadTradingPairsByInterval(ctx context.Context, exchange string, interval string, client *exchanges.BittrexClient) error {
+func (s *SetupCommand) loadTradingPairsByInterval(ctx context.Context, exchange string, interval string, client exchanges.Exchange) error {
 	markets, err := s.marketStore.GetMarkets(ctx, exchange)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func (s *SetupCommand) loadTradingPairsByInterval(ctx context.Context, exchange 
 	return nil
 }
 
-func (s *SetupCommand) loadTicks(ctx context.Context, chartID int, marketKey string, interval string, client *exchanges.BittrexClient) error {
+func (s *SetupCommand) loadTicks(ctx context.Context, chartID int, marketKey string, interval string, client exchanges.Exchange) error {
 	clientInterval := exchanges.Intervals["bittrex"][interval]
 	candles, err := client.GetCandles(marketKey, clientInterval)
 	if err != nil {

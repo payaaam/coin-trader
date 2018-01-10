@@ -13,3 +13,7 @@ func StringToDecimal(s string) decimal.Decimal {
 	d, _ := decimal.NewFromString(s)
 	return d
 }
+
+func ZeroDecimal() decimal.Decimal {
+	return decimal.New(0, 0)
+}
