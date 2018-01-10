@@ -9,7 +9,7 @@ $ brew update
 $ brew install golang
 ```
 
-**Update your .bashrc file**
+**Update your .bashrc / .bash_profile file**
 
 Add these lines to your `.bashrc` file.
 
