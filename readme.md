@@ -56,7 +56,7 @@ export BITTREX_API_SECRET="test"
 ```
 3. Source the environment variables
 ```bash
-source bittrex.env
+$ source bittrex.env
 ```
 
 
