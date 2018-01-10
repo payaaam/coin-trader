@@ -40,7 +40,7 @@ Port: 5432
 Database: postgres
 ```
 
-**Setup DB**
+## Database
 
 `$ make setup-db`
 
