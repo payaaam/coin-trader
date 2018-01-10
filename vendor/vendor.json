@@ -9,6 +9,12 @@
 			"revisionTime": "2016-10-25T12:05:01Z"
 		},
 		{
+			"checksumSHA1": "+hQAF7/X0rDg/sXFbUkoUHfLsx8=",
+			"path": "github.com/lib/pq",
+			"revision": "017e4c14d80628353eaee677a1aeffe47a10c0dc",
+			"revisionTime": "2017-10-11T13:52:33Z"
+		},
+		{
 			"checksumSHA1": "4nhXt+svWtwsjFzQMbBywcykuEo=",
 			"path": "github.com/shopspring/decimal",
 			"revision": "9ca7f51822d222ae4e246f070f9aad863599bd1a",
@@ -43,6 +49,12 @@
 			"path": "golang.org/x/net/context",
 			"revision": "c7086645de248775cbf2373cf5ca4d2fa664b8c1",
 			"revisionTime": "2017-11-10T09:49:23Z"
+		},
+		{
+			"checksumSHA1": "093pil5Ey6DV1UFZ3ssW8ojpcTs=",
+			"path": "gopkg.in/volatiletech/null.v6",
+			"revision": "40264a2e6b7972d183906cf17663983c23231c82",
+			"revisionTime": "2016-11-15T15:23:47Z"
 		}
 	],
 	"rootPath": "github.com/payaaam/coin-trader"

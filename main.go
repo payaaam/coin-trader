@@ -1,5 +1,9 @@
 package main
 
+func main() {}
+
+/*
+
 import (
 	"database/sql"
 	_ "github.com/lib/pq"
