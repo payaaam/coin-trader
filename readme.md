@@ -20,7 +20,11 @@ export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:$GOROOT/bin
 ```
 
-`$ source ~/.bash_profile`
+**Source your updated bash profile**
+
+```bash
+$ source ~/.bash_profile
+```
 
 **Install Postgres**
 
@@ -43,6 +47,18 @@ Database: postgres
 ## Bittrex
 
 **Create an API Key**
+
+1. Create `./bittrex.env`
+2. Add the following lines...
+```bash
+export BITTREX_API_KEY="test"
+export BITTREX_API_SECRET="test"
+```
+3. Source the environment variables
+```bash
+source bittrex.env
+```
+
 
 Navigate to [Bittrex Settings](https://bittrex.com/Manage#sectionApi)
 
