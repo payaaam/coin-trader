@@ -201,34 +201,3 @@ func (c *CloudChart) PrintSummary() {
 	fmt.Println()
 }
 */
-
-/*
-func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
-	zero, _ := decimal.NewFromString("0")
-	if senkouB.Equals(zero) {
-		return "N/A"
-	}
-
-	if senkouA.GreaterThan(senkouB) {
-		return "GREEN"
-	}
-
-	if senkouB.GreaterThan(senkouA) {
-		return "RED"
-	}
-
-	if senkouA.Equals(senkouB) {
-		return "NONE"
-	}
-
-	return "N/A"
-}
-
-func getDaysSinceLastCross(lc int64) int {
-
-	last := time.Unix(lc, 0)
-	now := time.Now()
-	diff := now.Sub(last)
-	return int(diff.Hours() / 24)
-}
-*/
