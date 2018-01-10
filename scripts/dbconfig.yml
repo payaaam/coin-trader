@@ -1,0 +1,4 @@
+development:
+    dialect: postgres
+    datasource: dbname=coins user=postgres sslmode=disable
+    dir: db/migrations
