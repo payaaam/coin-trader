@@ -20,6 +20,6 @@ func NewCloudPoint(tenkan decimal.Decimal, kijun decimal.Decimal, senkouB decima
 		SenkouA:      senkouA,
 		SenkouB:      senkouB,
 		Displacement: displacement,
-		Color:        getCloudColor(senkouA, senkouB),
+		//Color:        getCloudColor(senkouA, senkouB),
 	}
 }

@@ -2,12 +2,12 @@ package charts
 
 import (
 	"errors"
-	"fmt"
-	"github.com/fatih/color"
-	"github.com/shopspring/decimal"
+	//"fmt"
+	//"github.com/fatih/color"
+	//"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"sort"
-	"time"
+	//"time"
 )
 
 const (
@@ -118,6 +118,7 @@ func (c *CloudChart) GetLastCandle() *Candle {
 	return c.candles[lastCandleIndex]
 }
 
+/*
 func (c *CloudChart) PrintSummary() {
 	green := color.New(color.FgGreen).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
@@ -199,7 +200,9 @@ func (c *CloudChart) PrintSummary() {
 	fmt.Printf("Kijun: %v\n", candle.Kijun)
 	fmt.Println()
 }
+*/
 
+/*
 func getCloudColor(senkouA decimal.Decimal, senkouB decimal.Decimal) string {
 	zero, _ := decimal.NewFromString("0")
 	if senkouB.Equals(zero) {
@@ -228,3 +231,4 @@ func getDaysSinceLastCross(lc int64) int {
 	diff := now.Sub(last)
 	return int(diff.Hours() / 24)
 }
+*/

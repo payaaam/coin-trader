@@ -37,7 +37,7 @@ func (s *SetupCommand) Run(exchange string, interval string) {
 	}
 
 	bittrex := bittrex.New(s.config.Bittrex.ApiKey, s.config.Bittrex.ApiSecret)
-	bittrexClient := exchanges.NewClient(bittrex)
+	bittrexClient := exchanges.NewBittrexClient(bittrex)
 
 	err := s.loadMarkets(ctx, exchange, bittrexClient)
 	if err != nil {

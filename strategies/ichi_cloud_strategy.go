@@ -83,3 +83,66 @@ func findLastTKCross(chart *charts.CloudChart, crossType int) int {
 
 	return periodsSinceLastCross
 }
+
+func isAboveCloud(chart *charts.CloudChart) bool {
+	return false
+}
+
+/*
+
+func FindNextTKCross(chart *CloudChart) decimal.Decimal {
+	candles := chart.GetCandles()
+	chartLength := len(candles) - 1
+	lastCandle := candles[chartLength]
+	secondToLast := candles[chartLength-1]
+
+	return findIntersection(lastCandle, secondToLast)
+}
+
+func findIntersection(currentCandle *Candle, previousCandle *Candle) decimal.Decimal {
+	zero, _ := decimal.NewFromString("0")
+	tenkanSlope := currentCandle.Tenkan.Sub(previousCandle.Tenkan)
+	kijunSlope := currentCandle.Kijun.Sub(previousCandle.Kijun)
+
+	if tenkanSlope.Equals(zero) && kijunSlope.Equals(zero) {
+		return zero
+	}
+
+	// (TenkanSlope * X) + prev.Tenkan = (KijunSlope * X) + prev.Kijun
+	// ((TenkanSlope - KijunSlope) * X) = (prev.Kijun - prev.Tenkan)
+	// X = (prev.Kijun - prev.Tenkan) / (TenkanSlope - KijunSlope)
+	num := previousCandle.Kijun.Sub(previousCandle.Tenkan)
+	denom := tenkanSlope.Sub(kijunSlope)
+
+	if denom.Equals(zero) {
+		return zero
+	}
+
+	return num.Div(denom)
+}
+
+func getCloudColor(chart *charts.CloudChart) string, bool {
+	candle := chart.GetLastCandle()
+	senkouA := candle.senkouA
+	senkouB := candle.senkouB
+
+	if senkouB.Equals(utils.ZeroDecimal()) {
+		return "", false
+	}
+
+	if senkouA.GreaterThan(senkouB) {
+		return "green"
+	}
+
+	if senkouB.GreaterThan(senkouA) {
+		return "red"
+	}
+
+	if senkouA.Equals(senkouB) {
+		return "NONE"
+	}
+
+	return "N/A"
+}
+
+*/

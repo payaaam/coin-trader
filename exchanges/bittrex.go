@@ -9,7 +9,7 @@ type BittrexClient struct {
 	client *bittrex.Bittrex
 }
 
-func NewClient(client *bittrex.Bittrex) *BittrexClient {
+func NewBittrexClient(client *bittrex.Bittrex) *BittrexClient {
 	return &BittrexClient{
 		client: client,
 	}
@@ -81,24 +81,6 @@ func (b *BittrexClient) GetBitcoinMarkets() ([]*Market, error) {
 	return bittrexMarkets, nil
 }
 
-func (b *BittrexClient) GetMarkets() ([]*Market, error) {
-	markets, err := b.client.GetMarkets()
-	if err != nil {
-		return nil, err
-	}
-
-	var bittrexMarkets []*Market
-	for _, market := range markets {
-		if market.BaseCurrency == "BTC" {
-			bittrexMarkets = append(bittrexMarkets, &Market{
-				MarketKey:          market.MarketName,
-				BaseCurrency:       market.BaseCurrency,
-				MarketCurrency:     market.MarketCurrency,
-				BaseCurrencyName:   market.BaseCurrencyLong,
-				MarketCurrencyName: market.MarketCurrencyLong,
-			})
-		}
-	}
-
-	return bittrexMarkets, nil
+func (b *BittrexClient) ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error) {
+	return "", nil
 }

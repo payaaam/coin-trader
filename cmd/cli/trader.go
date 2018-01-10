@@ -44,7 +44,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 	}
 
 	bittrex := bittrex.New(t.config.Bittrex.ApiKey, t.config.Bittrex.ApiSecret)
-	bittrexClient := exchanges.NewClient(bittrex)
+	bittrexClient := exchanges.NewBittrexClient(bittrex)
 	clientInterval := exchanges.Intervals["bittrex"][interval]
 
 	// Get Open Positions
