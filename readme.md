@@ -42,6 +42,10 @@ Database: postgres
 
 ## Database
 
+**Download Mirgation Tool**
+`$ go get github.com/rubenv/sql-migrate/...`
+
+**Upload Schema to Database**
 `$ make setup-db`
 
 ## Bittrex
