@@ -9,10 +9,16 @@ import (
 type Config struct {
 	PostgresConn string
 	Bittrex      *BittrexConfig
+	Binance      *BinanceConfig
 	LogLevel     log.Level
 }
 
 type BittrexConfig struct {
+	ApiKey    string
+	ApiSecret string
+}
+
+type BinanceConfig struct {
 	ApiKey    string
 	ApiSecret string
 }
@@ -29,19 +35,37 @@ func NewConfig() *Config {
 	// Setup Bittrex Client
 	bittrexConfig := loadBittrexConfig()
 
+	binanceConfig := loadBinanceConfig()
+
 	return &Config{
 		PostgresConn: postgresConn,
 		Bittrex:      bittrexConfig,
+		Binance:			binanceConfig,
 		LogLevel:     logLevel,
 	}
 }
 
+
+// @TODO: Make Generic
 func loadBittrexConfig() *BittrexConfig {
 	apiKey := os.Getenv("BITTREX_API_KEY")
 	apiSecret := os.Getenv("BITTREX_API_SECRET")
 
 	if apiKey != "" && apiSecret != "" {
 		return &BittrexConfig{
+			ApiKey:    apiKey,
+			ApiSecret: apiSecret,
+		}
+	}
+	return nil
+}
+
+func loadBinanceConfig() *BinanceConfig {
+	apiKey := os.Getenv("BINANCE_API_KEY")
+	apiSecret := os.Getenv("BINANCE_API_SECRET")
+
+	if apiKey != "" && apiSecret != "" {
+		return &BinanceConfig{
 			ApiKey:    apiKey,
 			ApiSecret: apiSecret,
 		}

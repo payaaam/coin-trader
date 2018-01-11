@@ -8,6 +8,7 @@ import (
 	"github.com/payaaam/coin-trader/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/toorop/go-bittrex"
+	"github.com/adshao/go-binance"
 	"golang.org/x/net/context"
 	"gopkg.in/volatiletech/null.v6"
 )
@@ -37,10 +38,17 @@ func (s *SetupCommand) Run(exchange string, interval string) {
 	}
 
 	bittrex := bittrex.New(s.config.Bittrex.ApiKey, s.config.Bittrex.ApiSecret)
+	binance := binance.NewClient(s.config.Binance.ApiKey, s.config.Binance.ApiSecret)
 	bittrexClient := exchanges.NewBittrexClient(bittrex)
+	binanceClient := exchanges.NewBinanceClient(binance)
 
 	err := s.loadMarkets(ctx, exchange, bittrexClient)
 	if err != nil {
+		log.Error(err)
+	}
+
+	errBinance := s.loadMarkets(ctx, exchange, binanceClient)
+	if errBinance != nil {
 		log.Error(err)
 	}
 
