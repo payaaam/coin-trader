@@ -89,6 +89,33 @@ func main() {
 				return nil
 			},
 		},
+		{
+			Name:  "backtest",
+			Usage: "test a strat on all the data",
+			Action: func(c *cli.Context) error {
+				if exchanges.ValidExchanges[exchange] != true {
+					log.Error(errors.New("Not a valid exchange"))
+				}
+
+				if db.ValidIntervals[interval] != true {
+					log.Error(errors.New("Not a valid exchange interval"))
+				}
+
+				config := NewConfig()
+				postgres, err := sql.Open("postgres", config.PostgresConn)
+				if err != nil {
+					panic(err)
+				}
+
+				marketStore := db.NewMarketStore(postgres)
+				chartStore := db.NewChartStore(postgres)
+				tickStore := db.NewTickStore(postgres)
+
+				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore)
+				backTestCommand.Run(exchange, interval)
+				return nil
+			},
+		},
 	}
 
 	app.Run(os.Args)

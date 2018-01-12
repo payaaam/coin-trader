@@ -4,7 +4,7 @@ import (
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
-	//log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	//"github.com/shopspring/decimal"
 	"errors"
 )
@@ -23,19 +23,26 @@ func NewCloudStrategy() *CloudStrategy {
 }
 
 func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
+	if chart.GetCandleCount() < 120 {
+		return false
+	}
 	periodsSinceLastCross := findLastTKCross(chart, BullishCross)
+	//log.Infof("Buy SINCE LAST: %v", periodsSinceLastCross)
 	if periodsSinceLastCross == NoCrossNumber {
 		return false
 	}
 
-	if periodsSinceLastCross == 0 || periodsSinceLastCross == 1 {
+	if periodsSinceLastCross == 0 {
 
 		hasStrongTenkan := hasStrongTenkanSlope(chart)
+		//log.Infof("STRONG TENKAN: %v", hasStrongTenkan)
 
 		cloudPosition, err := getPriceCloudPosition(chart)
 		if err != nil {
+			log.Error(err)
 			return false
 		}
+		//log.Infof("Cloud Position: %v", cloudPosition)
 
 		// If String Bullish TK Cross just occured
 		// -- TK Cross + Price Above cloud
@@ -71,6 +78,9 @@ func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
 }
 
 func (c *CloudStrategy) ShouldSell(chart *charts.CloudChart) bool {
+	if chart.GetCandleCount() < 120 {
+		return false
+	}
 	periodsSinceLastCross := findLastTKCross(chart, BearishCross)
 	if periodsSinceLastCross == NoCrossNumber {
 		return false
@@ -79,7 +89,7 @@ func (c *CloudStrategy) ShouldSell(chart *charts.CloudChart) bool {
 	// If Bearish TK Cross just occured
 	// -- TK Cross + Price Above / In / Below cloud
 	// -- -- YES
-	if periodsSinceLastCross == 0 || periodsSinceLastCross == 1 {
+	if periodsSinceLastCross == 0 {
 		return true
 	}
 
@@ -123,7 +133,7 @@ func getPriceCloudPosition(chart *charts.CloudChart) (int, error) {
 	candles := chart.GetCandles()
 	chartLength := len(candles) - 1
 
-	if chartLength > 2 {
+	if chartLength < 3 {
 		return 0, errors.New("not enough candles")
 	}
 
@@ -157,6 +167,7 @@ func getPriceCloudPosition(chart *charts.CloudChart) (int, error) {
 	return 0, errors.New("No conditions met")
 }
 
+// Returns a decimal value representing the slope of the Tenkan
 func getSlopeOfTenkan(chart *charts.CloudChart) (decimal.Decimal, error) {
 	candles := chart.GetCandles()
 	chartLength := len(candles) - 1
@@ -170,8 +181,8 @@ func getSlopeOfTenkan(chart *charts.CloudChart) (decimal.Decimal, error) {
 	return currentCandle.Tenkan.Sub(previousCandle.Tenkan), nil
 }
 
+// Measures the slope of the Tenkan line. Returns favorable if greater than 0
 func hasStrongTenkanSlope(chart *charts.CloudChart) bool {
-
 	slopeOfTenkan, err := getSlopeOfTenkan(chart)
 	if err != nil {
 		return false

@@ -27,7 +27,7 @@ type CloudChart struct {
 	Cloud                map[int]*CloudPoint
 }
 
-func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*CloudChart, error) {
+func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange string) (*CloudChart, error) {
 
 	sort.Slice(candles, func(i, j int) bool {
 		return candles[i].TimeStamp < candles[j].TimeStamp
@@ -60,16 +60,33 @@ func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*Clo
 	return chart, nil
 }
 
+func NewCloudChart(tradingPair string, exchange string) *CloudChart {
+	chart := &CloudChart{
+		candles:              []*Candle{},
+		Market:               tradingPair,
+		Exchange:             exchange,
+		KijunMovingAverage:   NewMovingAverage(KijunPeriod),
+		TenkanMovingAverage:  NewMovingAverage(TenkanPeriod),
+		SenkouBMovingAverage: NewMovingAverage(SenkouBPeriod),
+		Cloud:                make(map[int]*CloudPoint),
+	}
+	return chart
+}
+
 func (c *CloudChart) SetCandles(candles []*Candle) {
 	c.candles = candles
 }
 
 func (c *CloudChart) AddCandle(candle *Candle) {
-	if c.GetLastCandle().TimeStamp == candle.TimeStamp {
+	lastCandle := c.GetLastCandle()
+	if lastCandle != nil && lastCandle.TimeStamp == candle.TimeStamp {
 		c.KijunMovingAverage.RemoveLast()
 		c.TenkanMovingAverage.RemoveLast()
 		c.SenkouBMovingAverage.RemoveLast()
+		c.candles = c.candles[:len(c.candles)-1]
 	}
+
+	c.candles = append(c.candles, candle)
 	c.KijunMovingAverage.Add(candle.High, candle.Low)
 	c.TenkanMovingAverage.Add(candle.High, candle.Low)
 	c.SenkouBMovingAverage.Add(candle.High, candle.Low)
@@ -117,7 +134,14 @@ func (c *CloudChart) Print() {
 	}
 }
 
+func (c *CloudChart) GetCandleCount() int {
+	return len(c.candles)
+}
+
 func (c *CloudChart) GetLastCandle() *Candle {
+	if len(c.candles) == 0 {
+		return nil
+	}
 	lastCandleIndex := len(c.candles) - 1
 	return c.candles[lastCandleIndex]
 }

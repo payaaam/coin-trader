@@ -12,6 +12,8 @@ import (
 	"gopkg.in/volatiletech/null.v6"
 )
 
+var MarketKey = "btc-gnt"
+
 type SetupCommand struct {
 	config      *Config
 	marketStore *db.MarketStore
@@ -83,7 +85,7 @@ func (s *SetupCommand) loadTradingPairsByInterval(ctx context.Context, exchange 
 
 	for _, m := range markets {
 
-		if m.MarketKey != "btc-neo" {
+		if m.MarketKey != MarketKey {
 			continue
 		}
 

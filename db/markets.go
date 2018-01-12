@@ -31,9 +31,9 @@ func (m *MarketStore) GetMarkets(ctx context.Context, exchange string) ([]*model
 	).All()
 }
 
-func (m *MarketStore) GetMarket(ctx context.Context, marketName string, marketKey string) (*models.Market, error) {
+func (m *MarketStore) GetMarket(ctx context.Context, exchangeName string, marketKey string) (*models.Market, error) {
 	market, err := models.Markets(m.db,
-		qm.Where("market_name=?", marketName),
+		qm.Where("exchange_name=?", exchangeName),
 		qm.And("market_key=?", marketKey),
 	).One()
 
