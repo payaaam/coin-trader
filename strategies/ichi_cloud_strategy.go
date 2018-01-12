@@ -72,14 +72,18 @@ func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
 
 func (c *CloudStrategy) ShouldSell(chart *charts.CloudChart) bool {
 	periodsSinceLastCross := findLastTKCross(chart, BearishCross)
-	if periodsSinceLastCross == 0 || periodsSinceLastCross == 1 {
-		return true
+	if periodsSinceLastCross == NoCrossNumber {
+		return false
 	}
-	return false
+
 	// If Bearish TK Cross just occured
 	// -- TK Cross + Price Above / In / Below cloud
 	// -- -- YES
+	if periodsSinceLastCross == 0 || periodsSinceLastCross == 1 {
+		return true
+	}
 
+	return false
 }
 
 // crossType == -1 - Bearish Cross
@@ -129,12 +133,12 @@ func getPriceCloudPosition(chart *charts.CloudChart) (int, error) {
 		return 0, err
 	}
 
-	// Check above Cloud
+	// Above the Cloud
 	if lastCandle.Close.GreaterThan(candleCloud.SenkouB) && lastCandle.Close.GreaterThan(candleCloud.SenkouA) {
 		return AboveCloud, nil
 	}
 
-	// Check in Bullish
+	// In a Bullish Cloud
 	if candleCloud.SenkouA.GreaterThan(lastCandle.Close) && lastCandle.Close.GreaterThan(candleCloud.SenkouB) {
 		return InCloud, nil
 	}
@@ -144,7 +148,7 @@ func getPriceCloudPosition(chart *charts.CloudChart) (int, error) {
 		return InCloud, nil
 	}
 
-	// Check below Cloud
+	// Below the Cloud
 	if lastCandle.Close.LessThan(candleCloud.SenkouB) && lastCandle.Close.LessThan(candleCloud.SenkouA) {
 		return BelowCloud, nil
 	}
