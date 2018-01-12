@@ -60,6 +60,10 @@ func NewCloudChart(candles []*Candle, tradingPair string, exchange string) (*Clo
 	return chart, nil
 }
 
+func (c *CloudChart) SetCandles(candles []*Candle) {
+	c.candles = candles
+}
+
 func (c *CloudChart) AddCandle(candle *Candle) {
 	if c.GetLastCandle().TimeStamp == candle.TimeStamp {
 		c.KijunMovingAverage.RemoveLast()
