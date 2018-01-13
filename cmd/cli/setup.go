@@ -1,14 +1,14 @@
 package main
 
 import (
+	"github.com/adshao/go-binance"
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	log "github.com/sirupsen/logrus"
-	"github.com/toorop/go-bittrex"
-	"github.com/adshao/go-binance"
+	//"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
 	"gopkg.in/volatiletech/null.v6"
 )
@@ -37,25 +37,21 @@ func (s *SetupCommand) Run(exchange string, interval string) {
 		panic("No Bittrex Config Found")
 	}
 
-	bittrex := bittrex.New(s.config.Bittrex.ApiKey, s.config.Bittrex.ApiSecret)
+	//bittrex := bittrex.New(s.config.Bittrex.ApiKey, s.config.Bittrex.ApiSecret)
+	//bittrexClient := exchanges.NewBittrexClient(bittrex)
 	binance := binance.NewClient(s.config.Binance.ApiKey, s.config.Binance.ApiSecret)
-	bittrexClient := exchanges.NewBittrexClient(bittrex)
 	binanceClient := exchanges.NewBinanceClient(binance)
-
-	err := s.loadMarkets(ctx, exchange, bittrexClient)
+	err := s.loadMarkets(ctx, exchange, binanceClient)
 	if err != nil {
 		log.Error(err)
 	}
 
-	errBinance := s.loadMarkets(ctx, exchange, binanceClient)
-	if errBinance != nil {
-		log.Error(err)
-	}
-
-	err = s.loadTradingPairsByInterval(ctx, exchange, interval, bittrexClient)
-	if err != nil {
-		log.Error(err)
-	}
+	/*
+		err = s.loadTradingPairsByInterval(ctx, exchange, interval, bittrexClient)
+		if err != nil {
+			log.Error(err)
+		}
+	*/
 }
 
 func (s *SetupCommand) loadMarkets(ctx context.Context, exchange string, client exchanges.Exchange) error {
