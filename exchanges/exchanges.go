@@ -9,6 +9,7 @@ import (
 type Exchange interface {
 	GetBitcoinMarkets() ([]*Market, error)
 	GetCandles(tradingPair string, interval string) ([]*charts.Candle, error)
+	GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error)
 	ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error)
 }
 

@@ -18,27 +18,33 @@ func main() {
 	app.Usage = ""
 
 	var exchange string
+	exchangeFlag := cli.StringFlag{
+		Name:        "exchange",
+		Value:       "bittrex",
+		Usage:       "the `exchange` you want to pull ticker data from",
+		Destination: &exchange,
+	}
 	var interval string
-	appFlags := []cli.Flag{
-		cli.StringFlag{
-			Name:        "exchange",
-			Value:       "bittrex",
-			Usage:       "the `exchange` you want to pull ticker data from",
-			Destination: &exchange,
-		},
-		cli.StringFlag{
-			Name:        "interval",
-			Value:       "1D",
-			Usage:       "the `time interval` of the tickers (1D, 4h, 1h, 30)",
-			Destination: &interval,
-		},
+	intervalFlag := cli.StringFlag{
+		Name:        "interval",
+		Value:       "1D",
+		Usage:       "the `time interval` of the tickers (1D, 4h, 1h, 30)",
+		Destination: &interval,
+	}
+
+	var marketKey string
+	marketKeyFlag := cli.StringFlag{
+		Name:        "marketKey",
+		Value:       "btc-eth",
+		Usage:       "the `market pair` you want to test (btc-eth, btc-gnt)",
+		Destination: &marketKey,
 	}
 
 	app.Commands = []cli.Command{
 		{
-			Name:  "setup",
+			Name:  "ticker",
 			Usage: "Initalizes the database",
-			Flags: appFlags,
+			Flags: []cli.Flag{exchangeFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))
@@ -58,15 +64,15 @@ func main() {
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				setupCommand := NewSetupCommand(config, marketStore, chartStore, tickStore)
-				setupCommand.Run(exchange, interval)
+				tickerCommand := NewTickerCommand(config, marketStore, chartStore, tickStore)
+				tickerCommand.Run(exchange)
 				return nil
 			},
 		},
 		{
 			Name:  "trader",
 			Usage: "makes you money $$$$",
-			Flags: appFlags,
+			Flags: []cli.Flag{exchangeFlag, intervalFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))
@@ -94,7 +100,7 @@ func main() {
 		{
 			Name:  "backtest",
 			Usage: "test a strat on all the data",
-			Flags: appFlags,
+			Flags: []cli.Flag{exchangeFlag, intervalFlag, marketKeyFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))
@@ -115,7 +121,7 @@ func main() {
 				tickStore := db.NewTickStore(postgres)
 
 				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore)
-				backTestCommand.Run(exchange, interval)
+				backTestCommand.Run(exchange, interval, marketKey)
 				return nil
 			},
 		},
