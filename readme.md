@@ -91,7 +91,12 @@ Backtesting involves running a strategy over existing data to determine if it wi
 
 First, update the `GetStrategy` function in `cmd/cli/backtest.go` to point to your new strategy. Then build and run.
 
-`$ make cli`
-`$ bin/cli backtest --interval=1h --marketKey=btc-eth`
+```bash
+# Build CLI
+$ make cli
+
+# Run Backtest with 1h chart and btc-eth market
+$ bin/cli backtest --interval=1h --marketKey=btc-eth
+```
 
 You will see a summary and the percent change on your investment.
