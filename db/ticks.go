@@ -100,3 +100,25 @@ func (t *TickStore) GetChartCandles(ctx context.Context, marketKey string, excha
 
 	return candles, nil
 }
+
+func (t *TickStore) GetLatestChartCandle(ctx context.Context, chartID int) (*charts.Candle, error) {
+	tick, err := models.Ticks(t.db,
+		qm.Select("open", "close", "high", "low", "volume", "day", "timestamp"),
+		qm.Where("chart_id = ?", chartID),
+		qm.OrderBy("timestamp DESC"),
+	).One()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &charts.Candle{
+		TimeStamp: tick.Timestamp,
+		Day:       tick.Day,
+		Open:      utils.StringToDecimal(tick.Open),
+		Close:     utils.StringToDecimal(tick.Close),
+		High:      utils.StringToDecimal(tick.High),
+		Low:       utils.StringToDecimal(tick.Low),
+		Volume:    utils.StringToDecimal(tick.Volume),
+	}, nil
+}

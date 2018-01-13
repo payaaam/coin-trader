@@ -19,7 +19,7 @@ func main() {
 
 	var exchange string
 	var interval string
-	app.Flags = []cli.Flag{
+	appFlags := []cli.Flag{
 		cli.StringFlag{
 			Name:        "exchange",
 			Value:       "bittrex",
@@ -38,6 +38,7 @@ func main() {
 		{
 			Name:  "setup",
 			Usage: "Initalizes the database",
+			Flags: appFlags,
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))
@@ -65,6 +66,7 @@ func main() {
 		{
 			Name:  "trader",
 			Usage: "makes you money $$$$",
+			Flags: appFlags,
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))
@@ -92,6 +94,7 @@ func main() {
 		{
 			Name:  "backtest",
 			Usage: "test a strat on all the data",
+			Flags: appFlags,
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))

@@ -9,6 +9,7 @@ import (
 type Exchange interface {
 	GetBitcoinMarkets() ([]*Market, error)
 	GetCandles(tradingPair string, interval string) ([]*charts.Candle, error)
+	GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error)
 	ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error)
 }
 
@@ -24,7 +25,7 @@ type Market struct {
 var Intervals = map[string]map[string]string{
 	"bittrex": map[string]string{
 		db.ThirtyMinuteInterval: "thirtyMin",
-		db.OneDayInterval:       "hour",
+		db.OneHourInterval:      "hour",
 		db.OneDayInterval:       "day",
 	},
 }
