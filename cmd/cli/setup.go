@@ -86,7 +86,6 @@ func (s *SetupCommand) fetchInterval(ctx context.Context, exchange string, inter
 				log.Error(err)
 			}
 		}
-
 	}
 }
 
