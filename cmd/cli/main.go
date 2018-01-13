@@ -32,6 +32,14 @@ func main() {
 		Destination: &interval,
 	}
 
+	var marketKey string
+	marketKeyFlag := cli.StringFlag{
+		Name:        "marketKey",
+		Value:       "btc-eth",
+		Usage:       "the `market pair` you want to test (btc-eth, btc-gnt)",
+		Destination: &marketKey,
+	}
+
 	app.Commands = []cli.Command{
 		{
 			Name:  "ticker",
@@ -92,7 +100,7 @@ func main() {
 		{
 			Name:  "backtest",
 			Usage: "test a strat on all the data",
-			Flags: []cli.Flag{exchangeFlag, intervalFlag},
+			Flags: []cli.Flag{exchangeFlag, intervalFlag, marketKeyFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
 					log.Error(errors.New("Not a valid exchange"))
@@ -113,7 +121,7 @@ func main() {
 				tickStore := db.NewTickStore(postgres)
 
 				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore)
-				backTestCommand.Run(exchange, interval)
+				backTestCommand.Run(exchange, interval, marketKey)
 				return nil
 			},
 		},

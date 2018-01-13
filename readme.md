@@ -83,3 +83,15 @@ Navigate to [Bittrex Settings](https://bittrex.com/Manage#sectionApi)
 
 `$ bin/cli trader`
 
+
+
+## Backtesting
+
+Backtesting involves running a strategy over existing data to determine if it will be profitable. To backtest, you need to create a new strategy in the strategies folder. It must abide by the `Strategy interface{}` and have `ShouldBuy()` and `ShouldSell()`.
+
+First, update the `GetStrategy` function in `cmd/cli/backtest.go` to point to your new strategy. Then build and run.
+
+`$ make cli`
+`$ bin/cli backtest --interval=1h --marketKey=btc-eth`
+
+You will see a summary and the percent change on your investment.

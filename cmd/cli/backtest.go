@@ -5,15 +5,13 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
-	"github.com/shopspring/decimal"
-	//"github.com/payaaam/coin-trader/db/models"
-	//"github.com/payaaam/coin-trader/exchanges"
+	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/strategies"
 	"github.com/payaaam/coin-trader/utils"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	//"github.com/toorop/go-bittrex"
+	"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
-	//"gopkg.in/volatiletech/null.v6"
 	"time"
 )
 
@@ -33,55 +31,111 @@ func NewBackTestCommand(config *Config, marketStore *db.MarketStore, chartStore 
 	}
 }
 
-func (s *BackTestCommand) Run(exchange string, interval string) {
+// UPDATE HERE when testing a new strategy
+func GetStrategy() strategies.Strategy {
+	return strategies.NewCloudStrategy()
+}
+
+func (b *BackTestCommand) Run(exchange string, interval string, marketKey string) {
 	ctx := context.Background()
-	green := color.New(color.FgGreen).SprintFunc()
-	red := color.New(color.FgRed).SprintFunc()
 
-	// Get Market and Chart
-	// Get Ticks
-	// For Each tick, addCandle to the chart
-	// At Each, test should by and should sell
-
-	candles, err := s.tickStore.GetAllChartCandles(ctx, MarketKey, exchange, interval)
-	if err != nil {
-		log.Error(err)
+	if b.config.Bittrex == nil {
+		panic("No Bittrex Config Found")
 	}
 
-	ichimokuCloudStrategy := strategies.NewCloudStrategy()
-	chart := charts.NewCloudChart(MarketKey, exchange)
+	bittrex := bittrex.New(b.config.Bittrex.ApiKey, b.config.Bittrex.ApiSecret)
+	bittrexClient := exchanges.NewBittrexClient(bittrex)
+
+	err := loadMarkets(ctx, b.marketStore, bittrexClient, exchange)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	log.Infof("Running Test for %s on %s Chart", marketKey, interval)
+	log.Info()
+
+	market, err := b.marketStore.GetMarket(ctx, exchange, marketKey)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	chart, err := loadChart(ctx, b.chartStore, market.ID, interval)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	err = loadTicks(ctx, b.tickStore, bittrexClient, chart.ID, market.MarketKey, interval)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	candles, err := b.tickStore.GetAllChartCandles(ctx, marketKey, exchange, interval)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	b.Test(candles, exchange, marketKey)
+}
+
+func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, marketKey string) {
+	ichimokuCloudStrategy := GetStrategy()
+	chart := charts.NewCloudChart(marketKey, exchange)
+
+	originalPrice := candles[0].Open
 
 	balance := utils.StringToDecimal("1")
 	var inPlay decimal.Decimal
+	var hasMoneyInPlay = false
 	for _, candle := range candles {
-		//log.Infof("INSIDE CANDLE: %d", candle.Day)
 		chart.AddCandle(candle)
-		if ichimokuCloudStrategy.ShouldBuy(chart) == true {
-			balance = balance.Sub(candle.Close)
-			inPlay = candle.Close
-			log.Infof("BUY: %v", green(candle.Close))
-			log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
-			log.Info()
+		if ichimokuCloudStrategy.ShouldBuy(chart) == true && hasMoneyInPlay == false {
+			balance, inPlay = buy(balance, candle)
+			hasMoneyInPlay = true
+
 		}
 
-		if ichimokuCloudStrategy.ShouldSell(chart) == true {
-			log.Infof("SELL: %v", red(candle.Close))
-			balance = balance.Add(candle.Close)
-			inPlay = utils.ZeroDecimal()
-			log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
-			/*
-				log.Println("--- Candle ----")
-				log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
-				log.Printf("Open: %v", candle.Open)
-				log.Printf("Close: %v", candle.Close)
-				log.Printf("Tenkan: %v", candle.Tenkan)
-				log.Printf("Kijun: %v", candle.Kijun)
-			*/
-			log.Info()
+		if ichimokuCloudStrategy.ShouldSell(chart) == true && hasMoneyInPlay == true {
+			balance, inPlay = sell(balance, candle)
+			hasMoneyInPlay = false
 		}
 	}
 
-	log.Infof("NET: %v", balance.Add(inPlay))
+	log.Infof("--- Summary for %s---", marketKey)
+	calculateWinnings(originalPrice, balance.Add(inPlay))
+}
 
-	//chart.Print()
+func sell(balance decimal.Decimal, candle *charts.Candle) (decimal.Decimal, decimal.Decimal) {
+	red := color.New(color.FgRed).SprintFunc()
+	log.Infof("SELL: %v", red(candle.Close))
+	balance = balance.Add(candle.Close)
+	log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
+	log.Info()
+	return balance, utils.ZeroDecimal()
+}
+
+func buy(balance decimal.Decimal, candle *charts.Candle) (decimal.Decimal, decimal.Decimal) {
+	green := color.New(color.FgGreen).SprintFunc()
+	balance = balance.Sub(candle.Close)
+	log.Infof("BUY: %v", green(candle.Close))
+	log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
+	log.Info()
+	return balance, candle.Close
+}
+
+func calculateWinnings(original decimal.Decimal, endAmount decimal.Decimal) {
+	red := color.New(color.FgRed).SprintFunc()
+	green := color.New(color.FgGreen).SprintFunc()
+	winnings := endAmount.Sub(utils.StringToDecimal("1")).Sub(original)
+	percentChange := winnings.Div(original).Mul(utils.StringToDecimal("100")).Round(2)
+
+	if percentChange.Sign() == 1 {
+		log.Infof("Percent Change: %v", green(percentChange))
+	} else {
+		log.Infof("Percent Change: %v", red(percentChange))
+	}
 }

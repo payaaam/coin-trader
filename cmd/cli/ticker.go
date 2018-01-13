@@ -1,24 +1,19 @@
 package main
 
 import (
-	"database/sql"
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
-	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	//"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
-	"gopkg.in/volatiletech/null.v6"
 	"os"
 	"os/signal"
 	"time"
 )
-
-var MarketKey = "btc-ebst"
 
 var AllTicksTimeout time.Duration = 5 * time.Second
 var LatestTickTimeout time.Duration = 1 * time.Second
@@ -52,7 +47,7 @@ func (t *TickerCommand) Run(exchange string) {
 	bittrex := bittrex.New(t.config.Bittrex.ApiKey, t.config.Bittrex.ApiSecret)
 	bittrexClient := exchanges.NewBittrexClient(bittrex)
 
-	err := t.loadMarkets(ctx, exchange, bittrexClient)
+	err := loadMarkets(ctx, t.marketStore, bittrexClient, exchange)
 	if err != nil {
 		log.Error(err)
 	}
@@ -98,31 +93,6 @@ func (t *TickerCommand) fetchInterval(ctx context.Context, exchange string, inte
 	}
 }
 
-func (t *TickerCommand) loadMarkets(ctx context.Context, exchange string, client exchanges.Exchange) error {
-	log.Debug("Loading BTC Markets")
-	markets, err := client.GetBitcoinMarkets()
-	if err != nil {
-		return err
-	}
-
-	for _, m := range markets {
-		market := &models.Market{
-			ExchangeName:       exchange,
-			BaseCurrency:       utils.Normalize(m.BaseCurrency),
-			BaseCurrencyName:   null.StringFrom(utils.Normalize(m.BaseCurrencyName)),
-			MarketCurrency:     utils.Normalize(m.MarketCurrency),
-			MarketCurrencyName: null.StringFrom(utils.Normalize(m.MarketCurrencyName)),
-			MarketKey:          utils.Normalize(m.MarketKey),
-		}
-		err = t.marketStore.Upsert(ctx, market)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange string, interval string, client exchanges.Exchange) error {
 	markets, err := t.marketStore.GetMarkets(ctx, exchange)
 	if err != nil {
@@ -131,19 +101,19 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 
 	for _, m := range markets {
 		log.Infof("--- %s ---", m.MarketKey)
-		chartID, err := t.getChartID(ctx, m.ID, interval)
+		chart, err := loadChart(ctx, t.chartStore, m.ID, interval)
 		if err != nil {
 			return err
 		}
 
-		shouldFetchLatest, err := t.shouldFetchAllTicks(ctx, chartID, interval)
+		shouldFetchLatest, err := shouldFetchAllTicks(ctx, t.tickStore, chart.ID, interval)
 		if err != nil {
 			return err
 		}
 
 		// Checks if we should fetch all ticks, or just the latest
 		if shouldFetchLatest == true {
-			err = t.loadAllTicks(ctx, chartID, m.MarketKey, interval, client)
+			err = loadTicks(ctx, t.tickStore, client, chart.ID, m.MarketKey, interval)
 			if err != nil {
 				return err
 			}
@@ -151,46 +121,11 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 			continue
 		}
 
-		err = t.loadLatestTick(ctx, chartID, m.MarketKey, interval, client)
+		err = loadLatestTick(ctx, t.tickStore, client, chart.ID, m.MarketKey, interval)
 		if err != nil {
 			return err
 		}
 		time.Sleep(LatestTickTimeout)
-	}
-
-	return nil
-}
-
-// Load all the ticks for a graph. This API is expensive
-func (t *TickerCommand) loadAllTicks(ctx context.Context, chartID int, marketKey string, interval string, client exchanges.Exchange) error {
-	log.Infof("Fetched All Ticks: %s", interval)
-	clientInterval := exchanges.Intervals["bittrex"][interval]
-	candles, err := client.GetCandles(marketKey, clientInterval)
-	if err != nil {
-		return err
-	}
-
-	for _, candle := range candles {
-		err := t.tickStore.Upsert(ctx, chartID, candle)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Loads the latest tick for a marketKey. This API is inexpensive
-func (t *TickerCommand) loadLatestTick(ctx context.Context, chartID int, marketKey string, interval string, client exchanges.Exchange) error {
-	log.Infof("Fetched Latest Ticks: %s", interval)
-	clientInterval := exchanges.Intervals["bittrex"][interval]
-	candle, err := client.GetLatestCandle(marketKey, clientInterval)
-	if err != nil {
-		return err
-	}
-
-	err = t.tickStore.Upsert(ctx, chartID, candle)
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -208,15 +143,15 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 		}
 
 		log.Infof("--- %s ---", m.MarketKey)
-		chartID, err := t.getChartID(ctx, m.ID, baseInterval)
+		chart, err := loadChart(ctx, t.chartStore, m.ID, baseInterval)
 		if err != nil {
 			return err
 		}
 
-		log.Infof("ChartID: %v", chartID)
+		log.Infof("ChartID: %v", chart.ID)
 		startTime, endTime := getPreviousPeriodRange(newCandleInterval)
 		log.Infof("start: %v - end: %v", startTime, endTime)
-		candles, err := t.tickStore.GetCandlesFromRange(ctx, chartID, startTime, endTime)
+		candles, err := t.tickStore.GetCandlesFromRange(ctx, chart.ID, startTime, endTime)
 		if err != nil {
 			return err
 		}
@@ -269,80 +204,4 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 
 	}
 	return nil
-}
-
-// Get ChartID from Market
-func (t *TickerCommand) getChartID(ctx context.Context, marketID int, interval string) (int, error) {
-	chart := &models.Chart{
-		MarketID: marketID,
-		Interval: interval,
-	}
-
-	err := t.chartStore.Upsert(ctx, chart)
-	if err != nil {
-		return 0, err
-	}
-
-	return chart.ID, nil
-}
-
-// Determines if the CLI should fetch all ticks, or just latest
-func (t *TickerCommand) shouldFetchAllTicks(ctx context.Context, chartID int, interval string) (bool, error) {
-	latestCandle, err := t.tickStore.GetLatestChartCandle(ctx, chartID)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return false, err
-		}
-		latestCandle = &charts.Candle{}
-	}
-
-	// Determine if we need to fetch all candles, or just the latest
-	lastTimestamp := getLastTimestamp(interval)
-	intervalMS := intervalMilliseconds(interval)
-
-	if lastTimestamp-latestCandle.TimeStamp > intervalMS {
-		return true, nil
-	}
-	return false, nil
-}
-
-// Gets the last timestamp for the chart given an interval.
-func getLastTimestamp(interval string) int64 {
-	ts := time.Now().UTC()
-
-	if interval == db.OneDayInterval {
-		rounded := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
-		return rounded.Unix()
-	}
-
-	if interval == db.OneHourInterval {
-		rounded := time.Date(ts.Year(), ts.Month(), ts.Day(), ts.Hour(), 0, 0, 0, time.UTC)
-		return rounded.Unix()
-	}
-
-	return 0
-}
-
-func getPreviousPeriodRange(interval string) (int64, int64) {
-	ts := time.Now().UTC()
-
-	if interval == db.OneDayInterval {
-		start := time.Date(ts.Year(), ts.Month(), ts.Day()-1, 0, 0, 0, 0, time.UTC)
-		end := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
-
-		return start.Unix(), end.Unix()
-	}
-
-	if interval == db.OneHourInterval {
-		start := time.Date(ts.Year(), ts.Month(), ts.Day(), ts.Hour()-1, 0, 0, 0, time.UTC)
-		end := time.Date(ts.Year(), ts.Month(), ts.Day(), ts.Hour(), 0, 0, 0, time.UTC)
-		return start.Unix(), end.Unix()
-	}
-
-	return 0, 0
-}
-
-// Converts a interval to milliseconds. 1h = 60 minutes * 60 seconds
-func intervalMilliseconds(interval string) int64 {
-	return int64(db.IntervalMilliseconds[interval])
 }
