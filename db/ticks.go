@@ -122,3 +122,32 @@ func (t *TickStore) GetLatestChartCandle(ctx context.Context, chartID int) (*cha
 		Volume:    utils.StringToDecimal(tick.Volume),
 	}, nil
 }
+
+func (t *TickStore) GetCandlesFromRange(ctx context.Context, chartID int, start int64, end int64) ([]*charts.Candle, error) {
+	ticks, err := models.Ticks(t.db,
+		qm.Select("open", "close", "high", "low", "volume", "day", "timestamp"),
+		qm.Where("chart_id = ?", chartID),
+		qm.And("timestamp >= ?", start),
+		qm.And("timestamp < ?", end),
+		qm.OrderBy("timestamp DESC"),
+	).All()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var candles []*charts.Candle
+	for _, tick := range ticks {
+		candles = append(candles, &charts.Candle{
+			TimeStamp: tick.Timestamp,
+			Day:       tick.Day,
+			Open:      utils.StringToDecimal(tick.Open),
+			Close:     utils.StringToDecimal(tick.Close),
+			High:      utils.StringToDecimal(tick.High),
+			Low:       utils.StringToDecimal(tick.Low),
+			Volume:    utils.StringToDecimal(tick.Volume),
+		})
+	}
+
+	return candles, nil
+}
