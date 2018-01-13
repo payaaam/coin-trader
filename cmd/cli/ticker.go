@@ -203,7 +203,6 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 	}
 
 	for _, m := range markets {
-
 		if m.MarketKey != "btc-eth" {
 			continue
 		}
@@ -215,7 +214,7 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 		}
 
 		log.Infof("ChartID: %v", chartID)
-		startTime, endTime := getPreviousTimestampRange(newCandleInterval)
+		startTime, endTime := getPreviousPeriodRange(newCandleInterval)
 		log.Infof("start: %v - end: %v", startTime, endTime)
 		candles, err := t.tickStore.GetCandlesFromRange(ctx, chartID, startTime, endTime)
 		if err != nil {
@@ -324,7 +323,7 @@ func getLastTimestamp(interval string) int64 {
 	return 0
 }
 
-func getPreviousTimestampRange(interval string) (int64, int64) {
+func getPreviousPeriodRange(interval string) (int64, int64) {
 	ts := time.Now().UTC()
 
 	if interval == db.OneDayInterval {
