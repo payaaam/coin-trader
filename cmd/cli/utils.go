@@ -2,16 +2,41 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	log "github.com/sirupsen/logrus"
+	"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
 	"gopkg.in/volatiletech/null.v6"
 	"time"
 )
+
+var ErrExchangeNotSetup = "exchange not setup"
+
+func getExchangeClient(config *Config, exchange string) (exchanges.Exchange, error) {
+
+	if exchange == "bittrex" {
+		if config.Bittrex == nil {
+			return nil, errors.New(ErrExchangeNotSetup)
+		}
+		bittrex := bittrex.New(config.Bittrex.ApiKey, config.Bittrex.ApiSecret)
+		return exchanges.NewBittrexClient(bittrex), nil
+	}
+
+	/*
+		if exchange == "binance" {
+			if config.Binance == nil {
+				return nil, errors.New(ErrExchangeNotSetup)
+			}
+		}
+	*/
+
+	return nil, errors.New(ErrExchangeNotSetup)
+}
 
 // Determines if the CLI should fetch all ticks, or just latest
 func shouldFetchAllTicks(ctx context.Context, tickStore *db.TickStore, chartID int, interval string) (bool, error) {
@@ -129,6 +154,8 @@ func getPreviousPeriodRange(interval string) (int64, int64) {
 	if interval == db.OneDayInterval {
 		start := time.Date(ts.Year(), ts.Month(), ts.Day()-1, 0, 0, 0, 0, time.UTC)
 		end := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
+
+		log.Info()
 
 		return start.Unix(), end.Unix()
 	}

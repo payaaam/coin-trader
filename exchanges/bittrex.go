@@ -9,7 +9,7 @@ type BittrexClient struct {
 	client *bittrex.Bittrex
 }
 
-func NewBittrexClient(client *bittrex.Bittrex) *BittrexClient {
+func NewBittrexClient(client *bittrex.Bittrex) Exchange {
 	return &BittrexClient{
 		client: client,
 	}

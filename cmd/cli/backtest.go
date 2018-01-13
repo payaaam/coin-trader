@@ -10,24 +10,25 @@ import (
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
 	"time"
 )
 
 type BackTestCommand struct {
-	config      *Config
-	marketStore *db.MarketStore
-	chartStore  *db.ChartStore
-	tickStore   *db.TickStore
+	config         *Config
+	marketStore    *db.MarketStore
+	chartStore     *db.ChartStore
+	tickStore      *db.TickStore
+	exchangeClient exchanges.Exchange
 }
 
-func NewBackTestCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore) *BackTestCommand {
+func NewBackTestCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore, client exchanges.Exchange) *BackTestCommand {
 	return &BackTestCommand{
-		config:      config,
-		marketStore: marketStore,
-		chartStore:  chartStore,
-		tickStore:   tickStore,
+		config:         config,
+		marketStore:    marketStore,
+		chartStore:     chartStore,
+		tickStore:      tickStore,
+		exchangeClient: client,
 	}
 }
 
@@ -43,10 +44,7 @@ func (b *BackTestCommand) Run(exchange string, interval string, marketKey string
 		panic("No Bittrex Config Found")
 	}
 
-	bittrex := bittrex.New(b.config.Bittrex.ApiKey, b.config.Bittrex.ApiSecret)
-	bittrexClient := exchanges.NewBittrexClient(bittrex)
-
-	err := loadMarkets(ctx, b.marketStore, bittrexClient, exchange)
+	err := loadMarkets(ctx, b.marketStore, b.exchangeClient, exchange)
 	if err != nil {
 		log.Error(err)
 		return
@@ -67,7 +65,7 @@ func (b *BackTestCommand) Run(exchange string, interval string, marketKey string
 		return
 	}
 
-	err = loadTicks(ctx, b.tickStore, bittrexClient, chart.ID, market.MarketKey, interval)
+	err = loadTicks(ctx, b.tickStore, b.exchangeClient, chart.ID, market.MarketKey, interval)
 	if err != nil {
 		log.Error(err)
 		return

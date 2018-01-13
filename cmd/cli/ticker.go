@@ -8,7 +8,6 @@ import (
 	"github.com/payaaam/coin-trader/utils"
 	//"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
 	"os"
 	"os/signal"
@@ -21,18 +20,20 @@ var OnTheFiftyMinuteMark = 50
 var HourStartOfNewDay = 0
 
 type TickerCommand struct {
-	config      *Config
-	marketStore *db.MarketStore
-	chartStore  *db.ChartStore
-	tickStore   *db.TickStore
+	config         *Config
+	marketStore    *db.MarketStore
+	chartStore     *db.ChartStore
+	tickStore      *db.TickStore
+	exchangeClient exchanges.Exchange
 }
 
-func NewTickerCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore) *TickerCommand {
+func NewTickerCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore, client exchanges.Exchange) *TickerCommand {
 	return &TickerCommand{
-		config:      config,
-		marketStore: marketStore,
-		chartStore:  chartStore,
-		tickStore:   tickStore,
+		config:         config,
+		marketStore:    marketStore,
+		chartStore:     chartStore,
+		tickStore:      tickStore,
+		exchangeClient: client,
 	}
 }
 
@@ -40,14 +41,7 @@ func (t *TickerCommand) Run(exchange string) {
 	ctx := context.Background()
 	log.Infof("Starting Ticker %s", exchange)
 
-	if t.config.Bittrex == nil {
-		panic("No Bittrex Config Found")
-	}
-
-	bittrex := bittrex.New(t.config.Bittrex.ApiKey, t.config.Bittrex.ApiSecret)
-	bittrexClient := exchanges.NewBittrexClient(bittrex)
-
-	err := loadMarkets(ctx, t.marketStore, bittrexClient, exchange)
+	err := loadMarkets(ctx, t.marketStore, t.exchangeClient, exchange)
 	if err != nil {
 		log.Error(err)
 	}
@@ -57,11 +51,11 @@ func (t *TickerCommand) Run(exchange string) {
 	/*
 
 		// Fetch Daily Once
-		go t.fetchOnce(ctx, exchange, db.OneDayInterval, bittrexClient)
+		go t.fetchOnce(ctx, exchange, db.OneDayInterval, t.exchangeClient)
 
 		// Fetch Hourly
 		ticker := time.NewTicker(time.Minute * 1)
-		go t.fetchInterval(ctx, exchange, db.OneHourInterval, bittrexClient, ticker)
+		go t.fetchInterval(ctx, exchange, db.OneHourInterval, t.exchangeClient, ticker)
 	*/
 
 	// Update Daily Chart

@@ -43,18 +43,23 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:  "ticker",
-			Usage: "Initalizes the database",
+			Usage: "fetches ticker information from exchange",
 			Flags: []cli.Flag{exchangeFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
-					log.Error(errors.New("Not a valid exchange"))
+					log.Fatal(errors.New("Not a valid exchange"))
 				}
 
 				if db.ValidIntervals[interval] != true {
-					log.Error(errors.New("Not a valid exchange interval"))
+					log.Fatal(errors.New("Not a valid exchange interval"))
 				}
 
 				config := NewConfig()
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
 					panic(err)
@@ -64,7 +69,7 @@ func main() {
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				tickerCommand := NewTickerCommand(config, marketStore, chartStore, tickStore)
+				tickerCommand := NewTickerCommand(config, marketStore, chartStore, tickStore, exchangeClient)
 				tickerCommand.Run(exchange)
 				return nil
 			},
@@ -83,6 +88,11 @@ func main() {
 				}
 
 				config := NewConfig()
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
 					panic(err)
@@ -92,7 +102,7 @@ func main() {
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore)
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient)
 				traderCommand.Run(exchange, interval)
 				return nil
 			},
@@ -111,6 +121,11 @@ func main() {
 				}
 
 				config := NewConfig()
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
 					panic(err)
@@ -120,7 +135,7 @@ func main() {
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore)
+				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore, exchangeClient)
 				backTestCommand.Run(exchange, interval, marketKey)
 				return nil
 			},

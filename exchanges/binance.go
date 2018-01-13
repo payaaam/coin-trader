@@ -11,7 +11,7 @@ import (
 type BinanceClient struct {
 }
 
-func NewBinanceClient() *BinanceClient {
+func NewBinanceClient() Exchange {
 	return &BinanceClient{}
 }
 
