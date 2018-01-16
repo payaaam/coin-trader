@@ -14,3 +14,6 @@ create-db:
 	psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'coins'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE coins"
 
 setup: create-db setup-db cli
+
+migrate-production:
+	sql-migrate up -config=scripts/dbconfig.yml -env=production

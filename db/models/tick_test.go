@@ -639,7 +639,7 @@ func testTicksSelect(t *testing.T) {
 }
 
 var (
-	tickDBTypes = map[string]string{`ChartID`: `integer`, `Close`: `text`, `Day`: `integer`, `High`: `text`, `ID`: `integer`, `Low`: `text`, `Open`: `text`, `Timestamp`: `bigint`, `Volume`: `text`}
+	tickDBTypes = map[string]string{`ChartID`: `integer`, `Close`: `text`, `High`: `text`, `ID`: `integer`, `Low`: `text`, `Open`: `text`, `Timestamp`: `bigint`, `Volume`: `text`}
 	_           = bytes.MinRead
 )
 

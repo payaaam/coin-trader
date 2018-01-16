@@ -28,10 +28,9 @@ func (b *BittrexLocalClient) GetCandles(path string, tradingPair string) ([]*cha
 	}
 
 	var chartCandles []*charts.Candle
-	for day, candle := range candles {
+	for _, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
 			TimeStamp: candle.TimeStamp.Time.Unix(),
-			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,
 			High:      candle.High,

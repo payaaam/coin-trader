@@ -45,14 +45,14 @@ func shouldFetchAllTicks(ctx context.Context, tickStore *db.TickStore, chartID i
 		if err != sql.ErrNoRows {
 			return false, err
 		}
-		latestCandle = &charts.Candle{}
+		return true, nil
 	}
 
 	// Determine if we need to fetch all candles, or just the latest
 	lastTimestamp := getLastTimestamp(interval)
 	intervalMS := intervalMilliseconds(interval)
 
-	if lastTimestamp-latestCandle.TimeStamp > intervalMS {
+	if latestCandle.TimeStamp-lastTimestamp > intervalMS {
 		return true, nil
 	}
 	return false, nil
@@ -80,6 +80,7 @@ func loadMarkets(ctx context.Context, marketStore *db.MarketStore, client exchan
 	}
 
 	for _, m := range markets {
+
 		market := &models.Market{
 			ExchangeName:       exchange,
 			BaseCurrency:       utils.Normalize(m.BaseCurrency),
@@ -97,6 +98,7 @@ func loadMarkets(ctx context.Context, marketStore *db.MarketStore, client exchan
 	return nil
 }
 
+// Loads all ticks exchange
 func loadTicks(ctx context.Context, tickStore *db.TickStore, client exchanges.Exchange, chartID int, marketKey string, interval string) error {
 	log.Infof("Fetched All Ticks: %s", interval)
 	clientInterval := exchanges.Intervals["bittrex"][interval]
@@ -135,12 +137,12 @@ func loadLatestTick(ctx context.Context, tickStore *db.TickStore, client exchang
 func getLastTimestamp(interval string) int64 {
 	ts := time.Now().UTC()
 
-	if interval == db.OneDayInterval {
+	if interval == charts.OneDayInterval {
 		rounded := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
 		return rounded.Unix()
 	}
 
-	if interval == db.OneHourInterval {
+	if interval == charts.OneHourInterval {
 		rounded := time.Date(ts.Year(), ts.Month(), ts.Day(), ts.Hour(), 0, 0, 0, time.UTC)
 		return rounded.Unix()
 	}
@@ -148,6 +150,8 @@ func getLastTimestamp(interval string) int64 {
 	return 0
 }
 
+// Gets the timestamp range for the previous period. This is used to create daily candles from
+// hourly candles
 func getPreviousPeriodRange(interval string) (int64, int64) {
 	ts := time.Now().UTC()
 
@@ -171,5 +175,5 @@ func getPreviousPeriodRange(interval string) (int64, int64) {
 
 // Converts a interval to milliseconds. 1h = 60 minutes * 60 seconds
 func intervalMilliseconds(interval string) int64 {
-	return int64(db.IntervalMilliseconds[interval])
+	return int64(charts.IntervalMilliseconds[interval])
 }

@@ -17,7 +17,8 @@ import (
 var AllTicksTimeout time.Duration = 5 * time.Second
 var LatestTickTimeout time.Duration = 1 * time.Second
 var OnTheFiftyMinuteMark = 50
-var HourStartOfNewDay = 0
+var HourStartOfNewDay = 1
+var MinuteStartOfNewDay = 10
 
 type TickerCommand struct {
 	config         *Config
@@ -46,19 +47,11 @@ func (t *TickerCommand) Run(exchange string) {
 		log.Error(err)
 	}
 
-	t.addDailyCandles(ctx, exchange, db.OneHourInterval, db.OneDayInterval)
+	go t.loadDailyTickers(ctx, exchange, t.exchangeClient)
 
-	/*
+	go t.setupHourlyTickerInterval(ctx, exchange, t.exchangeClient)
 
-		// Fetch Daily Once
-		go t.fetchOnce(ctx, exchange, db.OneDayInterval, t.exchangeClient)
-
-		// Fetch Hourly
-		ticker := time.NewTicker(time.Minute * 1)
-		go t.fetchInterval(ctx, exchange, db.OneHourInterval, t.exchangeClient, ticker)
-	*/
-
-	// Update Daily Chart
+	go t.setupDailyCandleTickerInterval(ctx, exchange)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
@@ -69,17 +62,30 @@ func (t *TickerCommand) Run(exchange string) {
 	log.Info("Shutting down")
 }
 
-func (t *TickerCommand) fetchOnce(ctx context.Context, exchange string, interval string, client exchanges.Exchange) {
-	err := t.loadTradingPairsByInterval(ctx, exchange, interval, client)
+func (t *TickerCommand) loadDailyTickers(ctx context.Context, exchange string, client exchanges.Exchange) {
+	err := t.loadTradingPairsByInterval(ctx, exchange, charts.OneDayInterval, client)
 	if err != nil {
 		log.Error(err)
 	}
 }
 
-func (t *TickerCommand) fetchInterval(ctx context.Context, exchange string, interval string, client exchanges.Exchange, ticker *time.Ticker) {
+func (t *TickerCommand) setupHourlyTickerInterval(ctx context.Context, exchange string, client exchanges.Exchange) {
+	ticker := time.NewTicker(time.Minute * 1)
 	for ticker := range ticker.C {
 		if ticker.Minute() == OnTheFiftyMinuteMark {
-			err := t.loadTradingPairsByInterval(ctx, exchange, interval, client)
+			err := t.loadTradingPairsByInterval(ctx, exchange, charts.OneHourInterval, client)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+}
+
+func (t *TickerCommand) setupDailyCandleTickerInterval(ctx context.Context, exchange string) {
+	ticker := time.NewTicker(time.Minute * 1)
+	for ticker := range ticker.C {
+		if ticker.Hour() == HourStartOfNewDay && ticker.Minute() == MinuteStartOfNewDay {
+			err := t.addDailyCandles(ctx, exchange, charts.OneHourInterval, charts.OneDayInterval)
 			if err != nil {
 				log.Error(err)
 			}
@@ -97,19 +103,21 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 		log.Infof("--- %s ---", m.MarketKey)
 		chart, err := loadChart(ctx, t.chartStore, m.ID, interval)
 		if err != nil {
-			return err
+			log.Error(err)
+			continue
 		}
 
-		shouldFetchLatest, err := shouldFetchAllTicks(ctx, t.tickStore, chart.ID, interval)
+		shouldFetchAllTicks, err := shouldFetchAllTicks(ctx, t.tickStore, chart.ID, interval)
 		if err != nil {
-			return err
+			log.Error(err)
+			continue
 		}
 
 		// Checks if we should fetch all ticks, or just the latest
-		if shouldFetchLatest == true {
+		if shouldFetchAllTicks == true {
 			err = loadTicks(ctx, t.tickStore, client, chart.ID, m.MarketKey, interval)
 			if err != nil {
-				return err
+				log.Error(err)
 			}
 			time.Sleep(AllTicksTimeout)
 			continue
@@ -117,9 +125,10 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 
 		err = loadLatestTick(ctx, t.tickStore, client, chart.ID, m.MarketKey, interval)
 		if err != nil {
-			return err
+			log.Error(err)
 		}
 		time.Sleep(LatestTickTimeout)
+
 	}
 
 	return nil
@@ -132,32 +141,32 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 	}
 
 	for _, m := range markets {
-		if m.MarketKey != "btc-eth" {
+
+		log.Infof("--- %s ---", m.MarketKey)
+		log.Info("Generating 24H Candle")
+		chart, err := loadChart(ctx, t.chartStore, m.ID, baseInterval)
+		if err != nil {
+			log.Error(err)
 			continue
 		}
 
-		log.Infof("--- %s ---", m.MarketKey)
-		chart, err := loadChart(ctx, t.chartStore, m.ID, baseInterval)
-		if err != nil {
-			return err
-		}
-
-		log.Infof("ChartID: %v", chart.ID)
 		startTime, endTime := getPreviousPeriodRange(newCandleInterval)
-		log.Infof("start: %v - end: %v", startTime, endTime)
 		candles, err := t.tickStore.GetCandlesFromRange(ctx, chart.ID, startTime, endTime)
 		if err != nil {
-			return err
+			log.Error(err)
+			continue
 		}
 
-		log.Infof("# CANDLES: %v", len(candles))
+		if len(candles) == 0 {
+			log.Warn("Candles do not exist in this timeframe.")
+			continue
+		}
 
 		var high = candles[0].High
 		var low = candles[0].Low
 		var close = candles[0].Close
 		var open = candles[len(candles)-1].Open
 		var volume = utils.ZeroDecimal()
-		var newDay = candles[len(candles)-1].Day + 1
 
 		for _, c := range candles {
 			volume = volume.Add(c.Volume)
@@ -176,26 +185,19 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 			Close:     close,
 			Volume:    volume,
 			TimeStamp: startTime,
-			Day:       newDay,
 		}
 
-		dailyCandle.Print()
-		/*
+		dailyChart, err := loadChart(ctx, t.chartStore, m.ID, newCandleInterval)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
 
-			dailyChartID, err := t.getChartID(ctx, m.ID, newCandleInterval)
-			if err != nil {
-				return err
-			}
-
-			err = t.tickStore.Upsert(ctx, dailyChartID, dailyCandle)
-			if err != nil {
-				return err
-			}
-		*/
-
-		// Get 1D chart
-		// Upsert Candle to chart.ID
-
+		err = t.tickStore.Upsert(ctx, dailyChart.ID, dailyCandle)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
 	}
 	return nil
 }

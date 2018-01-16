@@ -28,7 +28,6 @@ type Tick struct {
 	Close     string `boil:"close" json:"close" toml:"close" yaml:"close"`
 	High      string `boil:"high" json:"high" toml:"high" yaml:"high"`
 	Low       string `boil:"low" json:"low" toml:"low" yaml:"low"`
-	Day       int    `boil:"day" json:"day" toml:"day" yaml:"day"`
 	Volume    string `boil:"volume" json:"volume" toml:"volume" yaml:"volume"`
 	Timestamp int64  `boil:"timestamp" json:"timestamp" toml:"timestamp" yaml:"timestamp"`
 
@@ -43,7 +42,6 @@ var TickColumns = struct {
 	Close     string
 	High      string
 	Low       string
-	Day       string
 	Volume    string
 	Timestamp string
 }{
@@ -53,7 +51,6 @@ var TickColumns = struct {
 	Close:     "close",
 	High:      "high",
 	Low:       "low",
-	Day:       "day",
 	Volume:    "volume",
 	Timestamp: "timestamp",
 }
@@ -67,8 +64,8 @@ type tickR struct {
 type tickL struct{}
 
 var (
-	tickColumns               = []string{"id", "chart_id", "open", "close", "high", "low", "day", "volume", "timestamp"}
-	tickColumnsWithoutDefault = []string{"chart_id", "open", "close", "high", "low", "day", "volume", "timestamp"}
+	tickColumns               = []string{"id", "chart_id", "open", "close", "high", "low", "volume", "timestamp"}
+	tickColumnsWithoutDefault = []string{"chart_id", "open", "close", "high", "low", "volume", "timestamp"}
 	tickColumnsWithDefault    = []string{"id"}
 	tickPrimaryKeyColumns     = []string{"id"}
 )

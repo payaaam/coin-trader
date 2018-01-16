@@ -51,7 +51,7 @@ func (t *TraderCommand) Run(exchange string, interval string) {
 		panic(err)
 	}
 
-	chart, err := charts.NewCloudChartFromCandles(candles, "btc-neo", "bittrex")
+	chart, err := charts.NewCloudChartFromCandles(candles, "btc-neo", "bittrex", interval)
 	if err != nil {
 		panic(err)
 	}

@@ -77,12 +77,12 @@ func (b *BackTestCommand) Run(exchange string, interval string, marketKey string
 		return
 	}
 
-	b.Test(candles, exchange, marketKey)
+	b.Test(candles, exchange, marketKey, interval)
 }
 
-func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, marketKey string) {
+func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, marketKey string, interval string) {
 	ichimokuCloudStrategy := GetStrategy()
-	chart := charts.NewCloudChart(marketKey, exchange)
+	chart := charts.NewCloudChart(marketKey, exchange, interval)
 
 	originalPrice := candles[0].Open
 
@@ -105,6 +105,7 @@ func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, market
 
 	log.Infof("--- Summary for %s---", marketKey)
 	calculateWinnings(originalPrice, balance.Add(inPlay))
+
 }
 
 func sell(balance decimal.Decimal, candle *charts.Candle) (decimal.Decimal, decimal.Decimal) {

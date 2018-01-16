@@ -7,27 +7,22 @@ import (
 	//"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"sort"
-	//"time"
-)
-
-const (
-	TenkanPeriod       = 20
-	KijunPeriod        = 60
-	SenkouBPeriod      = 120
-	CloudLeadingPeriod = 30
+	"time"
 )
 
 type CloudChart struct {
 	Market               string
 	Exchange             string
+	Interval             string
 	candles              []*Candle
 	KijunMovingAverage   *MovingAverage
 	TenkanMovingAverage  *MovingAverage
 	SenkouBMovingAverage *MovingAverage
-	Cloud                map[int]*CloudPoint
+	Cloud                map[int64]*CloudPoint
+	Test                 bool
 }
 
-func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange string) (*CloudChart, error) {
+func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange string, interval string) (*CloudChart, error) {
 
 	sort.Slice(candles, func(i, j int) bool {
 		return candles[i].TimeStamp < candles[j].TimeStamp
@@ -37,14 +32,16 @@ func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange st
 		candles:              candles,
 		Market:               tradingPair,
 		Exchange:             exchange,
+		Interval:             interval,
 		KijunMovingAverage:   NewMovingAverage(KijunPeriod),
 		TenkanMovingAverage:  NewMovingAverage(TenkanPeriod),
 		SenkouBMovingAverage: NewMovingAverage(SenkouBPeriod),
-		Cloud:                make(map[int]*CloudPoint),
+		Cloud:                make(map[int64]*CloudPoint),
+		Test:                 false,
 	}
 
-	for day, _ := range chart.candles {
-		candle := chart.candles[day]
+	for index, _ := range chart.candles {
+		candle := chart.candles[index]
 		chart.KijunMovingAverage.Add(candle.High, candle.Low)
 		chart.TenkanMovingAverage.Add(candle.High, candle.Low)
 		chart.SenkouBMovingAverage.Add(candle.High, candle.Low)
@@ -54,21 +51,23 @@ func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange st
 		candle.Tenkan = chart.TenkanMovingAverage.Avg()
 		senkouB := chart.SenkouBMovingAverage.Avg()
 		cloud := NewCloudPoint(candle.Tenkan, candle.Kijun, senkouB)
-		chart.SetCloudPoint(day, cloud)
+		chart.SetCloudPoint(candle.TimeStamp, cloud)
 	}
 
 	return chart, nil
 }
 
-func NewCloudChart(tradingPair string, exchange string) *CloudChart {
+func NewCloudChart(tradingPair string, exchange string, interval string) *CloudChart {
 	chart := &CloudChart{
 		candles:              []*Candle{},
 		Market:               tradingPair,
 		Exchange:             exchange,
+		Interval:             interval,
 		KijunMovingAverage:   NewMovingAverage(KijunPeriod),
 		TenkanMovingAverage:  NewMovingAverage(TenkanPeriod),
 		SenkouBMovingAverage: NewMovingAverage(SenkouBPeriod),
-		Cloud:                make(map[int]*CloudPoint),
+		Cloud:                make(map[int64]*CloudPoint),
+		Test:                 false,
 	}
 	return chart
 }
@@ -96,34 +95,36 @@ func (c *CloudChart) AddCandle(candle *Candle) {
 	candle.Tenkan = c.TenkanMovingAverage.Avg()
 	senkouB := c.SenkouBMovingAverage.Avg()
 	cloud := NewCloudPoint(candle.Tenkan, candle.Kijun, senkouB)
-	c.SetCloudPoint(candle.Day, cloud)
+	c.SetCloudPoint(candle.TimeStamp, cloud)
 }
 
 func (c *CloudChart) GetCandles() []*Candle {
 	return c.candles
 }
 
-func (c *CloudChart) SetCloudPoint(day int, cloud *CloudPoint) {
-	c.Cloud[day+CloudLeadingPeriod] = cloud
+func (c *CloudChart) SetCloudPoint(timestamp int64, cloud *CloudPoint) {
+	leadingPeriodMs := int64(IntervalMilliseconds[c.Interval] * 30)
+	c.Cloud[timestamp+leadingPeriodMs] = cloud
 }
 
-func (c *CloudChart) GetCloud(day int) (*CloudPoint, error) {
-	if c.Cloud[day] != nil {
-		return c.Cloud[day], nil
+func (c *CloudChart) GetCloud(timestamp int64) (*CloudPoint, error) {
+	if c.Cloud[timestamp] != nil {
+		return c.Cloud[timestamp], nil
 	}
 
 	return nil, errors.New("No Cloud")
 }
 
 func (c *CloudChart) Print() {
-	for day, candle := range c.candles {
-		log.Infof("Day: %d -----", day)
-		log.Infof("TimeStamp: %v", candle.TimeStamp)
+	for _, candle := range c.candles {
+		log.Infof("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
+		log.Infof("TimeStamp (unix): %v", candle.TimeStamp)
+
 		log.Infof("Open: %v", candle.Open)
 		log.Infof("Close: %v", candle.Close)
 		log.Infof("Tenkan: %v", candle.Tenkan)
 		log.Infof("Kijun: %v", candle.Kijun)
-		cloud, err := c.GetCloud(day)
+		cloud, err := c.GetCloud(candle.TimeStamp)
 		if err == nil {
 			log.Infof("SenkouA: %v", cloud.SenkouA)
 			log.Infof("SenkouB: %v", cloud.SenkouB)
@@ -132,6 +133,8 @@ func (c *CloudChart) Print() {
 
 		log.Info()
 	}
+
+	log.Infof("CLOUD LENGTH: %v", len(c.Cloud))
 }
 
 func (c *CloudChart) GetCandleCount() int {

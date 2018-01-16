@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	_ "github.com/lib/pq"
+	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/exchanges"
 	log "github.com/sirupsen/logrus"
@@ -50,10 +51,6 @@ func main() {
 					log.Fatal(errors.New("Not a valid exchange"))
 				}
 
-				if db.ValidIntervals[interval] != true {
-					log.Fatal(errors.New("Not a valid exchange interval"))
-				}
-
 				config := NewConfig()
 				exchangeClient, err := getExchangeClient(config, exchange)
 				if err != nil {
@@ -83,7 +80,7 @@ func main() {
 					log.Error(errors.New("Not a valid exchange"))
 				}
 
-				if db.ValidIntervals[interval] != true {
+				if charts.ValidIntervals[interval] != true {
 					log.Error(errors.New("Not a valid exchange interval"))
 				}
 
@@ -116,7 +113,7 @@ func main() {
 					log.Error(errors.New("Not a valid exchange"))
 				}
 
-				if db.ValidIntervals[interval] != true {
+				if charts.ValidIntervals[interval] != true {
 					log.Error(errors.New("Not a valid exchange interval"))
 				}
 

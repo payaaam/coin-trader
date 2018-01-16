@@ -23,9 +23,10 @@ func NewCloudStrategy() *CloudStrategy {
 }
 
 func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
-	if chart.GetCandleCount() < 120 {
+	if chart.Test == false && chart.GetCandleCount() < 120 {
 		return false
 	}
+
 	periodsSinceLastCross := findLastTKCross(chart, BullishCross)
 	//log.Infof("Buy SINCE LAST: %v", periodsSinceLastCross)
 	if periodsSinceLastCross == NoCrossNumber {
@@ -78,7 +79,7 @@ func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
 }
 
 func (c *CloudStrategy) ShouldSell(chart *charts.CloudChart) bool {
-	if chart.GetCandleCount() < 120 {
+	if chart.Test == false && chart.GetCandleCount() < 120 {
 		return false
 	}
 	periodsSinceLastCross := findLastTKCross(chart, BearishCross)
@@ -105,13 +106,13 @@ func findLastTKCross(chart *charts.CloudChart, crossType int) int {
 	var periodsSinceLastCross = 0
 	var hasCrossed = false
 
-	for day := chartLength; day >= 0; day-- {
-		if day-1 < 0 {
+	for period := chartLength; period >= 0; period-- {
+		if period-1 < 0 {
 			break
 		}
 
-		candle := candles[day]
-		previousCandle := candles[day-1]
+		candle := candles[period]
+		previousCandle := candles[period-1]
 
 		currentDiff := candle.Tenkan.Sub(candle.Kijun)
 		previousDiff := previousCandle.Tenkan.Sub(previousCandle.Kijun)
@@ -133,12 +134,12 @@ func getPriceCloudPosition(chart *charts.CloudChart) (int, error) {
 	candles := chart.GetCandles()
 	chartLength := len(candles) - 1
 
-	if chartLength < 3 {
+	if chartLength < 1 {
 		return 0, errors.New("not enough candles")
 	}
 
 	lastCandle := candles[chartLength]
-	candleCloud, err := chart.GetCloud(lastCandle.Day)
+	candleCloud, err := chart.GetCloud(lastCandle.TimeStamp)
 	if err != nil {
 		return 0, err
 	}
