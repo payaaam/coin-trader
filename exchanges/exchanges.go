@@ -3,6 +3,7 @@ package exchanges
 import (
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
+	"github.com/shopspring/decimal"
 )
 
 // All Exchanges must follow this interface
@@ -11,6 +12,7 @@ type Exchange interface {
 	GetCandles(tradingPair string, interval string) ([]*charts.Candle, error)
 	GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error)
 	ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error)
+	GetBalances() ([]*Balance, error)
 }
 
 type Market struct {
@@ -20,6 +22,11 @@ type Market struct {
 	BaseCurrencyName   string
 	MarketCurrency     string
 	MarketCurrencyName string
+}
+
+type Balance struct {
+	BaseCurrency string
+	Amount       decimal.Decimal
 }
 
 var Intervals = map[string]map[string]string{

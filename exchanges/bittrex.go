@@ -85,3 +85,7 @@ func (b *BittrexClient) GetBitcoinMarkets() ([]*Market, error) {
 func (b *BittrexClient) ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error) {
 	return "", nil
 }
+
+func (b *BittrexClient) GetBalances() ([]*Balance, error) {
+	return nil, nil
+}

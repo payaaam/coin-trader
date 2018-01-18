@@ -31,3 +31,6 @@ func (b *BinanceClient) GetBitcoinMarkets() ([]*Market, error) {
 func (b *BinanceClient) ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error) {
 	return "", nil
 }
+func (b *BinanceClient) GetBalances() ([]*Balance, error) {
+	return nil, nil
+}
