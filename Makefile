@@ -4,6 +4,9 @@ models:
 cli:
 	go build -o bin/cli cmd/cli/*.go
 
+cli-production:
+	GOOS=linux GOARCH=amd64 go build -o bin/cli cmd/cli/*.go
+
 setup-db: create-db
 	sql-migrate up -config=scripts/dbconfig.yml
 

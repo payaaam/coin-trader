@@ -40,7 +40,10 @@ func NewTickerCommand(config *Config, marketStore *db.MarketStore, chartStore *d
 
 func (t *TickerCommand) Run(exchange string) {
 	ctx := context.Background()
-	log.Infof("Starting Ticker %s", exchange)
+	log.WithFields(log.Fields{
+		"type":     "start",
+		"exchange": exchange,
+	}).Info()
 
 	err := loadMarkets(ctx, t.marketStore, t.exchangeClient, exchange)
 	if err != nil {
@@ -59,7 +62,10 @@ func (t *TickerCommand) Run(exchange string) {
 		log.Warn("received SIGINT or SIGTERM")
 		break
 	}
-	log.Info("Shutting down")
+	log.WithFields(log.Fields{
+		"type":     "stop",
+		"exchange": exchange,
+	}).Info()
 }
 
 func (t *TickerCommand) loadDailyTickers(ctx context.Context, exchange string, client exchanges.Exchange) {
@@ -73,6 +79,9 @@ func (t *TickerCommand) setupHourlyTickerInterval(ctx context.Context, exchange 
 	ticker := time.NewTicker(time.Minute * 1)
 	for ticker := range ticker.C {
 		if ticker.Minute() == OnTheFiftyMinuteMark {
+			log.WithFields(log.Fields{
+				"exchange": exchange,
+			}).Info("Fetching Hourly Candles")
 			err := t.loadTradingPairsByInterval(ctx, exchange, charts.OneHourInterval, client)
 			if err != nil {
 				log.Error(err)
@@ -85,6 +94,9 @@ func (t *TickerCommand) setupDailyCandleTickerInterval(ctx context.Context, exch
 	ticker := time.NewTicker(time.Minute * 1)
 	for ticker := range ticker.C {
 		if ticker.Hour() == HourStartOfNewDay && ticker.Minute() == MinuteStartOfNewDay {
+			log.WithFields(log.Fields{
+				"exchange": exchange,
+			}).Info("Processing 24H Candles")
 			err := t.addDailyCandles(ctx, exchange, charts.OneHourInterval, charts.OneDayInterval)
 			if err != nil {
 				log.Error(err)
@@ -100,16 +112,16 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 	}
 
 	for _, m := range markets {
-		log.Infof("--- %s ---", m.MarketKey)
+		logInfo(m.MarketKey, interval, "Processing")
 		chart, err := loadChart(ctx, t.chartStore, m.ID, interval)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, interval, err)
 			continue
 		}
 
 		shouldFetchAllTicks, err := shouldFetchAllTicks(ctx, t.tickStore, chart.ID, interval)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, interval, err)
 			continue
 		}
 
@@ -117,7 +129,7 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 		if shouldFetchAllTicks == true {
 			err = loadTicks(ctx, t.tickStore, client, chart.ID, m.MarketKey, interval)
 			if err != nil {
-				log.Error(err)
+				logError(m.MarketKey, interval, err)
 			}
 			time.Sleep(AllTicksTimeout)
 			continue
@@ -125,7 +137,7 @@ func (t *TickerCommand) loadTradingPairsByInterval(ctx context.Context, exchange
 
 		err = loadLatestTick(ctx, t.tickStore, client, chart.ID, m.MarketKey, interval)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, interval, err)
 		}
 		time.Sleep(LatestTickTimeout)
 
@@ -141,19 +153,17 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 	}
 
 	for _, m := range markets {
-
-		log.Infof("--- %s ---", m.MarketKey)
-		log.Info("Generating 24H Candle")
+		logInfo(m.MarketKey, newCandleInterval, "Generating 24H Candle")
 		chart, err := loadChart(ctx, t.chartStore, m.ID, baseInterval)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, newCandleInterval, err)
 			continue
 		}
 
 		startTime, endTime := getPreviousPeriodRange(newCandleInterval)
 		candles, err := t.tickStore.GetCandlesFromRange(ctx, chart.ID, startTime, endTime)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, newCandleInterval, err)
 			continue
 		}
 
@@ -189,13 +199,13 @@ func (t *TickerCommand) addDailyCandles(ctx context.Context, exchange string, ba
 
 		dailyChart, err := loadChart(ctx, t.chartStore, m.ID, newCandleInterval)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, newCandleInterval, err)
 			continue
 		}
 
 		err = t.tickStore.Upsert(ctx, dailyChart.ID, dailyCandle)
 		if err != nil {
-			log.Error(err)
+			logError(m.MarketKey, newCandleInterval, err)
 			continue
 		}
 	}

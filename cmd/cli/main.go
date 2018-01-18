@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"errors"
+	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
@@ -48,10 +48,12 @@ func main() {
 			Flags: []cli.Flag{exchangeFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
-					log.Fatal(errors.New("Not a valid exchange"))
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
 				}
 
 				config := NewConfig()
+				initLogging(config.LogLevel, true)
+
 				exchangeClient, err := getExchangeClient(config, exchange)
 				if err != nil {
 					log.Fatal(err)
@@ -76,15 +78,17 @@ func main() {
 			Usage: "makes you money $$$$",
 			Flags: []cli.Flag{exchangeFlag, intervalFlag},
 			Action: func(c *cli.Context) error {
+				config := NewConfig()
+				initLogging(config.LogLevel, true)
+
 				if exchanges.ValidExchanges[exchange] != true {
-					log.Error(errors.New("Not a valid exchange"))
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
 				}
 
 				if charts.ValidIntervals[interval] != true {
-					log.Error(errors.New("Not a valid exchange interval"))
+					logFatal(fmt.Errorf("%s not a valid interval", interval))
 				}
 
-				config := NewConfig()
 				exchangeClient, err := getExchangeClient(config, exchange)
 				if err != nil {
 					log.Fatal(err)
@@ -109,15 +113,17 @@ func main() {
 			Usage: "test a strat on all the data",
 			Flags: []cli.Flag{exchangeFlag, intervalFlag, marketKeyFlag},
 			Action: func(c *cli.Context) error {
+				config := NewConfig()
+				initLogging(config.LogLevel, false)
+
 				if exchanges.ValidExchanges[exchange] != true {
-					log.Error(errors.New("Not a valid exchange"))
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
 				}
 
 				if charts.ValidIntervals[interval] != true {
-					log.Error(errors.New("Not a valid exchange interval"))
+					logFatal(fmt.Errorf("%s not a valid interval", interval))
 				}
 
-				config := NewConfig()
 				exchangeClient, err := getExchangeClient(config, exchange)
 				if err != nil {
 					log.Fatal(err)
@@ -125,7 +131,7 @@ func main() {
 
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				marketStore := db.NewMarketStore(postgres)

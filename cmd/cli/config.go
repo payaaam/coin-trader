@@ -75,5 +75,7 @@ func loadPostgres() string {
 		postgresDBName = "coins"
 	}
 
-	return fmt.Sprintf("dbname=%s user=%s host=%s port=%s sslmode=disable", postgresDBName, postgresUser, postgresHost, postgresPort)
+	postgresPassword := os.Getenv("POSTGRES_PASSWORD")
+
+	return fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%s sslmode=disable", postgresDBName, postgresUser, postgresPassword, postgresHost, postgresPort)
 }
