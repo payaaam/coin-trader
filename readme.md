@@ -100,3 +100,19 @@ $ bin/cli backtest --interval=1h --marketKey=btc-eth
 ```
 
 You will see a summary and the percent change on your investment.
+
+## Ticker
+
+The ticker application can will run and collect hourly ticker information for all of the markets on an exchange. 
+
+### Bittrex
+
+```bash
+# Build CLI
+$ make cli
+
+# Run ticker
+$ bin/cli ticker --exchange=bittrex
+```
+
+We collect hourly ticker information from bittrex due to API Rate Limit Restrictions. Then, every morning at 00:10 UTC, we process the last 24 hourly ticks and generate a 24H candle. This data is all written to RDS.

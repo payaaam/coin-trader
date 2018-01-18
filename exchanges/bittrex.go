@@ -9,7 +9,7 @@ type BittrexClient struct {
 	client *bittrex.Bittrex
 }
 
-func NewBittrexClient(client *bittrex.Bittrex) *BittrexClient {
+func NewBittrexClient(client *bittrex.Bittrex) Exchange {
 	return &BittrexClient{
 		client: client,
 	}
@@ -22,10 +22,9 @@ func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) ([]
 	}
 
 	var chartCandles []*charts.Candle
-	for day, candle := range candles {
+	for _, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
 			TimeStamp: candle.TimeStamp.Time.Unix(),
-			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,
 			High:      candle.High,
@@ -44,10 +43,9 @@ func (b *BittrexClient) GetLatestCandle(tradingPair string, chartInterval string
 	}
 
 	var chartCandles []*charts.Candle
-	for day, candle := range candles {
+	for _, candle := range candles {
 		chartCandles = append(chartCandles, &charts.Candle{
 			TimeStamp: candle.TimeStamp.Time.Unix(),
-			Day:       day,
 			Open:      candle.Open,
 			Close:     candle.Close,
 			High:      candle.High,
@@ -67,6 +65,9 @@ func (b *BittrexClient) GetBitcoinMarkets() ([]*Market, error) {
 
 	var bittrexMarkets []*Market
 	for _, market := range markets {
+		if market.IsActive == false {
+			continue
+		}
 		if market.BaseCurrency == "BTC" {
 			bittrexMarkets = append(bittrexMarkets, &Market{
 				MarketKey:          market.MarketName,

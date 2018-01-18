@@ -2,3 +2,8 @@ development:
     dialect: postgres
     datasource: dbname=coins user=postgres sslmode=disable
     dir: db/migrations
+
+production:
+    dialect: postgres
+    datasource: host=coin-db-rds.ceme4cja9x5m.us-east-1.rds.amazonaws.com dbname=coins user=coins_user password={{PASSWORD}}
+    dir: db/migrations

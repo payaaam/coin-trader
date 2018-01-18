@@ -2,8 +2,9 @@ package main
 
 import (
 	"database/sql"
-	"errors"
+	"fmt"
 	_ "github.com/lib/pq"
+	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/exchanges"
 	log "github.com/sirupsen/logrus"
@@ -43,18 +44,21 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:  "ticker",
-			Usage: "Initalizes the database",
+			Usage: "fetches ticker information from exchange",
 			Flags: []cli.Flag{exchangeFlag},
 			Action: func(c *cli.Context) error {
 				if exchanges.ValidExchanges[exchange] != true {
-					log.Error(errors.New("Not a valid exchange"))
-				}
-
-				if db.ValidIntervals[interval] != true {
-					log.Error(errors.New("Not a valid exchange interval"))
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
 				}
 
 				config := NewConfig()
+				initLogging(config.LogLevel, true)
+
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
 					panic(err)
@@ -64,7 +68,7 @@ func main() {
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				tickerCommand := NewTickerCommand(config, marketStore, chartStore, tickStore)
+				tickerCommand := NewTickerCommand(config, marketStore, chartStore, tickStore, exchangeClient)
 				tickerCommand.Run(exchange)
 				return nil
 			},
@@ -74,15 +78,22 @@ func main() {
 			Usage: "makes you money $$$$",
 			Flags: []cli.Flag{exchangeFlag, intervalFlag},
 			Action: func(c *cli.Context) error {
-				if exchanges.ValidExchanges[exchange] != true {
-					log.Error(errors.New("Not a valid exchange"))
-				}
-
-				if db.ValidIntervals[interval] != true {
-					log.Error(errors.New("Not a valid exchange interval"))
-				}
-
 				config := NewConfig()
+				initLogging(config.LogLevel, true)
+
+				if exchanges.ValidExchanges[exchange] != true {
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
+				}
+
+				if charts.ValidIntervals[interval] != true {
+					logFatal(fmt.Errorf("%s not a valid interval", interval))
+				}
+
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
 					panic(err)
@@ -92,7 +103,7 @@ func main() {
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore)
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient)
 				traderCommand.Run(exchange, interval)
 				return nil
 			},
@@ -102,25 +113,32 @@ func main() {
 			Usage: "test a strat on all the data",
 			Flags: []cli.Flag{exchangeFlag, intervalFlag, marketKeyFlag},
 			Action: func(c *cli.Context) error {
-				if exchanges.ValidExchanges[exchange] != true {
-					log.Error(errors.New("Not a valid exchange"))
-				}
-
-				if db.ValidIntervals[interval] != true {
-					log.Error(errors.New("Not a valid exchange interval"))
-				}
-
 				config := NewConfig()
+				initLogging(config.LogLevel, false)
+
+				if exchanges.ValidExchanges[exchange] != true {
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
+				}
+
+				if charts.ValidIntervals[interval] != true {
+					logFatal(fmt.Errorf("%s not a valid interval", interval))
+				}
+
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				postgres, err := sql.Open("postgres", config.PostgresConn)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				marketStore := db.NewMarketStore(postgres)
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
 
-				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore)
+				backTestCommand := NewBackTestCommand(config, marketStore, chartStore, tickStore, exchangeClient)
 				backTestCommand.Run(exchange, interval, marketKey)
 				return nil
 			},

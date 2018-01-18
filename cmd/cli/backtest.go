@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/fatih/color"
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
@@ -10,24 +11,25 @@ import (
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/toorop/go-bittrex"
 	"golang.org/x/net/context"
 	"time"
 )
 
 type BackTestCommand struct {
-	config      *Config
-	marketStore *db.MarketStore
-	chartStore  *db.ChartStore
-	tickStore   *db.TickStore
+	config         *Config
+	marketStore    *db.MarketStore
+	chartStore     *db.ChartStore
+	tickStore      *db.TickStore
+	exchangeClient exchanges.Exchange
 }
 
-func NewBackTestCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore) *BackTestCommand {
+func NewBackTestCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore, client exchanges.Exchange) *BackTestCommand {
 	return &BackTestCommand{
-		config:      config,
-		marketStore: marketStore,
-		chartStore:  chartStore,
-		tickStore:   tickStore,
+		config:         config,
+		marketStore:    marketStore,
+		chartStore:     chartStore,
+		tickStore:      tickStore,
+		exchangeClient: client,
 	}
 }
 
@@ -40,51 +42,47 @@ func (b *BackTestCommand) Run(exchange string, interval string, marketKey string
 	ctx := context.Background()
 
 	if b.config.Bittrex == nil {
-		panic("No Bittrex Config Found")
+		logFatal(fmt.Errorf("bittrex config not found"))
 	}
 
-	bittrex := bittrex.New(b.config.Bittrex.ApiKey, b.config.Bittrex.ApiSecret)
-	bittrexClient := exchanges.NewBittrexClient(bittrex)
-
-	err := loadMarkets(ctx, b.marketStore, bittrexClient, exchange)
+	err := loadMarkets(ctx, b.marketStore, b.exchangeClient, exchange)
 	if err != nil {
-		log.Error(err)
+		logError(marketKey, interval, err)
 		return
 	}
 
-	log.Infof("Running Test for %s on %s Chart", marketKey, interval)
-	log.Info()
+	logInfo(marketKey, interval, "Running backtest")
 
 	market, err := b.marketStore.GetMarket(ctx, exchange, marketKey)
 	if err != nil {
-		log.Error(err)
+		logError(marketKey, interval, err)
 		return
 	}
 
 	chart, err := loadChart(ctx, b.chartStore, market.ID, interval)
 	if err != nil {
-		log.Error(err)
+		logError(marketKey, interval, err)
 		return
 	}
 
-	err = loadTicks(ctx, b.tickStore, bittrexClient, chart.ID, market.MarketKey, interval)
+	err = loadTicks(ctx, b.tickStore, b.exchangeClient, chart.ID, market.MarketKey, interval)
 	if err != nil {
-		log.Error(err)
+		logError(marketKey, interval, err)
 		return
 	}
 
 	candles, err := b.tickStore.GetAllChartCandles(ctx, marketKey, exchange, interval)
 	if err != nil {
-		log.Error(err)
+		logError(marketKey, interval, err)
 		return
 	}
 
-	b.Test(candles, exchange, marketKey)
+	b.Test(candles, exchange, marketKey, interval)
 }
 
-func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, marketKey string) {
+func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, marketKey string, interval string) {
 	ichimokuCloudStrategy := GetStrategy()
-	chart := charts.NewCloudChart(marketKey, exchange)
+	chart := charts.NewCloudChart(marketKey, exchange, interval)
 
 	originalPrice := candles[0].Open
 
@@ -105,25 +103,20 @@ func (b *BackTestCommand) Test(candles []*charts.Candle, exchange string, market
 		}
 	}
 
-	log.Infof("--- Summary for %s---", marketKey)
 	calculateWinnings(originalPrice, balance.Add(inPlay))
 }
 
 func sell(balance decimal.Decimal, candle *charts.Candle) (decimal.Decimal, decimal.Decimal) {
 	red := color.New(color.FgRed).SprintFunc()
-	log.Infof("SELL: %v", red(candle.Close))
 	balance = balance.Add(candle.Close)
-	log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
-	log.Info()
+	log.Infof("SELL: %v - TimeStamp: %v", red(candle.Close), time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
 	return balance, utils.ZeroDecimal()
 }
 
 func buy(balance decimal.Decimal, candle *charts.Candle) (decimal.Decimal, decimal.Decimal) {
 	green := color.New(color.FgGreen).SprintFunc()
 	balance = balance.Sub(candle.Close)
-	log.Infof("BUY: %v", green(candle.Close))
-	log.Printf("TimeStamp: %v", time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
-	log.Info()
+	log.Printf("BUY:  %v - TimeStamp: %v", green(candle.Close), time.Unix(candle.TimeStamp, 0).UTC().Format("2006-01-02"))
 	return balance, candle.Close
 }
 
@@ -134,8 +127,8 @@ func calculateWinnings(original decimal.Decimal, endAmount decimal.Decimal) {
 	percentChange := winnings.Div(original).Mul(utils.StringToDecimal("100")).Round(2)
 
 	if percentChange.Sign() == 1 {
-		log.Infof("Percent Change: %v", green(percentChange))
+		log.Infof("Summary - Percent Change: %v", green(percentChange))
 	} else {
-		log.Infof("Percent Change: %v", red(percentChange))
+		log.Infof("Summary - Percent Change: %v", red(percentChange))
 	}
 }

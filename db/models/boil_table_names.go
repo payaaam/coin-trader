@@ -5,13 +5,15 @@
 package models
 
 var TableNames = struct {
-	Chart    string
-	Exchange string
-	Market   string
-	Tick     string
+	Chart          string
+	Exchange       string
+	GorpMigrations string
+	Market         string
+	Tick           string
 }{
-	Chart:    "chart",
-	Exchange: "exchange",
-	Market:   "market",
-	Tick:     "tick",
+	Chart:          "chart",
+	Exchange:       "exchange",
+	GorpMigrations: "gorp_migrations",
+	Market:         "market",
+	Tick:           "tick",
 }

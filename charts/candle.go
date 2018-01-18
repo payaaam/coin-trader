@@ -7,7 +7,6 @@ import (
 
 type Candle struct {
 	TimeStamp int64
-	Day       int
 	Open      decimal.Decimal
 	Close     decimal.Decimal
 	High      decimal.Decimal
@@ -24,7 +23,7 @@ func (c *Candle) Print() {
 	fmt.Printf("Close: %v\n", c.Close)
 	fmt.Printf("High: %v\n", c.High)
 	fmt.Printf("Low: %v\n", c.Low)
-	fmt.Printf("Day: %v\n", c.Day)
+	fmt.Printf("Volume: %v\n", c.Volume)
 	fmt.Printf("Tenkan: %v\n", c.Tenkan)
 	fmt.Printf("Kijun: %v\n", c.Kijun)
 }

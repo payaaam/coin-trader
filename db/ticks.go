@@ -29,7 +29,6 @@ func (t *TickStore) Upsert(ctx context.Context, chartID int, candle *charts.Cand
 		Low:       candle.Low.String(),
 		Volume:    candle.Volume.String(),
 		Timestamp: candle.TimeStamp,
-		Day:       candle.Day,
 	}
 	return tick.Upsert(t.db, true, []string{"chart_id", "timestamp"}, []string{"open", "close", "high", "low"})
 }
@@ -40,7 +39,7 @@ func (t *TickStore) Save(ctx context.Context, tick *models.Tick) error {
 
 func (t *TickStore) GetAllChartCandles(ctx context.Context, marketKey string, exchange string, interval string) ([]*charts.Candle, error) {
 	ticks, err := models.Ticks(t.db,
-		qm.Select("open", "close", "high", "low", "volume", "day", "timestamp"),
+		qm.Select("open", "close", "high", "low", "volume", "timestamp"),
 		qm.InnerJoin("chart ON chart.id = tick.chart_id"),
 		qm.InnerJoin("market ON market.id = chart.market_id"),
 		qm.Where("market.exchange_name = ?", exchange),
@@ -57,7 +56,6 @@ func (t *TickStore) GetAllChartCandles(ctx context.Context, marketKey string, ex
 	for _, tick := range ticks {
 		candles = append(candles, &charts.Candle{
 			TimeStamp: tick.Timestamp,
-			Day:       tick.Day,
 			Open:      utils.StringToDecimal(tick.Open),
 			Close:     utils.StringToDecimal(tick.Close),
 			High:      utils.StringToDecimal(tick.High),
@@ -71,7 +69,7 @@ func (t *TickStore) GetAllChartCandles(ctx context.Context, marketKey string, ex
 
 func (t *TickStore) GetChartCandles(ctx context.Context, marketKey string, exchange string, interval string) ([]*charts.Candle, error) {
 	ticks, err := models.Ticks(t.db,
-		qm.Select("open", "close", "high", "low", "volume", "day", "timestamp"),
+		qm.Select("open", "close", "high", "low", "volume", "timestamp"),
 		qm.InnerJoin("chart ON chart.id = tick.chart_id"),
 		qm.InnerJoin("market ON market.id = chart.market_id"),
 		qm.Where("market.exchange_name = ?", exchange),
@@ -89,7 +87,6 @@ func (t *TickStore) GetChartCandles(ctx context.Context, marketKey string, excha
 	for _, tick := range ticks {
 		candles = append(candles, &charts.Candle{
 			TimeStamp: tick.Timestamp,
-			Day:       tick.Day,
 			Open:      utils.StringToDecimal(tick.Open),
 			Close:     utils.StringToDecimal(tick.Close),
 			High:      utils.StringToDecimal(tick.High),
@@ -103,7 +100,7 @@ func (t *TickStore) GetChartCandles(ctx context.Context, marketKey string, excha
 
 func (t *TickStore) GetLatestChartCandle(ctx context.Context, chartID int) (*charts.Candle, error) {
 	tick, err := models.Ticks(t.db,
-		qm.Select("open", "close", "high", "low", "volume", "day", "timestamp"),
+		qm.Select("open", "close", "high", "low", "volume", "timestamp"),
 		qm.Where("chart_id = ?", chartID),
 		qm.OrderBy("timestamp DESC"),
 	).One()
@@ -114,7 +111,6 @@ func (t *TickStore) GetLatestChartCandle(ctx context.Context, chartID int) (*cha
 
 	return &charts.Candle{
 		TimeStamp: tick.Timestamp,
-		Day:       tick.Day,
 		Open:      utils.StringToDecimal(tick.Open),
 		Close:     utils.StringToDecimal(tick.Close),
 		High:      utils.StringToDecimal(tick.High),
@@ -125,7 +121,7 @@ func (t *TickStore) GetLatestChartCandle(ctx context.Context, chartID int) (*cha
 
 func (t *TickStore) GetCandlesFromRange(ctx context.Context, chartID int, start int64, end int64) ([]*charts.Candle, error) {
 	ticks, err := models.Ticks(t.db,
-		qm.Select("open", "close", "high", "low", "volume", "day", "timestamp"),
+		qm.Select("open", "close", "high", "low", "volume", "timestamp"),
 		qm.Where("chart_id = ?", chartID),
 		qm.And("timestamp >= ?", start),
 		qm.And("timestamp < ?", end),
@@ -140,7 +136,6 @@ func (t *TickStore) GetCandlesFromRange(ctx context.Context, chartID int, start 
 	for _, tick := range ticks {
 		candles = append(candles, &charts.Candle{
 			TimeStamp: tick.Timestamp,
-			Day:       tick.Day,
 			Open:      utils.StringToDecimal(tick.Open),
 			Close:     utils.StringToDecimal(tick.Close),
 			High:      utils.StringToDecimal(tick.High),

@@ -93,7 +93,6 @@ CREATE TABLE IF NOT EXISTS "tick" (
     "close" text NOT NULL,
     "high" text NOT NULL,
     "low" text NOT NULL,
-    "day" integer NOT NULL,
     "volume" text NOT NULL,
     "timestamp" bigint NOT NULL
 );
