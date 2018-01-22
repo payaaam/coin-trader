@@ -2,17 +2,20 @@ package orders
 
 import (
 	"errors"
-	"github.com/payaaam/coin-trader/db"
-	"github.com/payaaam/coin-trader/exchanges"
-	"github.com/payaaam/coin-trader/utils"
+	// "github.com/payaaam/coin-trader/db"
+	//"github.com/payaaam/coin-trader/exchanges"
+	//"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
+	"golang.org/x/net/context"
 )
 
 type OrderManager interface {
-	ExecuteLimitSell(exchange string, order *LimitOrder) error
-	ExecuteLimitBuy(exchange string, order *LimitOrder) error
+	ExecuteLimitSell(ctx context.Context, change string, order *LimitOrder) error
+	ExecuteLimitBuy(ctx context.Context, exchange string, order *LimitOrder) error
 }
 
+var BuyOrder = "buy"
+var SellOrder = "sell"
 var ErrNotEnoughFunds = errors.New("not enough coins")
 
 // LimitOrder object to execute on an exchange
@@ -20,7 +23,7 @@ type LimitOrder struct {
 	BaseCurrency   string
 	MarketCurrency string
 	Limit          decimal.Decimal
-	Amount         decimal.Decimal
+	Quantity       decimal.Decimal
 }
 
 type OpenOrder struct {
@@ -28,81 +31,12 @@ type OpenOrder struct {
 	MarketKey string
 	Quantity  decimal.Decimal
 	Limit     decimal.Decimal
-	UUID      string
+	ID        string
 }
 
-type Manager struct {
-	Balances   map[string]decimal.Decimal
-	OpenOrders []*OpenOrder
-	client     exchanges.Exchange
-	orderStore *db.OrderStore
-}
-
-func NewManager(client exchanges.Exchange, os *db.OrderStore) (OrderManager, error) {
-	manager := &Manager{
-		Balances:   make(map[string]decimal.Decimal),
-		OpenOrders: []*OpenOrder{},
-		client:     client,
-		orderStore: os,
-	}
-
-	err := manager.loadBalances()
-	if err != nil {
-		return nil, err
-	}
-
-	return manager, nil
-}
-
-func (m *Manager) ExecuteLimitSell(exchange string, order *LimitOrder) error {
-	balance := m.getBalance(order.MarketCurrency)
-	if hasAvailableFunds(balance, order) == false {
-		return ErrNotEnoughFunds
-	}
-
-
-	m.createOpenSellOrder()
-	// Update Balance Available
-	// Add Sell Order to DB
-
-	return  nil
-}
-
-
-func (m *Manager) ExecuteLimitBuy(exchange string, order *LimitOrder) error {
-	balance := m.getBalance(order.BaseCurrency)
-	if hasAvailableFunds(balance, order) == false {
-		return ErrNotEnoughFunds
-	}
-
-	m.createOpenBuyOrder()
-	// Update Balance Available
-	// Add Buy Order to DB
-
-
-	return nil
-}
-
-func (m *Manager) loadBalances() error {
-	// Get your balances from exchange
-	balances, err := m.client.GetBalances()
-	if err != nil {
-		return err
-	}
-
-	for _, balance := range balances {
-		m.setBalance(balance.BaseCurrency, balance.Amount)
-	}
-
-	return nil
-}
-
-func (m *Manager) setBalance(marketKey string, amount decimal.Decimal) {
-	m.Balances[utils.Normalize(marketKey)] = amount
-}
-
-func (m *Manager) getBalance(marketKey string) decimal.Decimal {
-	return m.Balances[[utils.Normalize(marketKey)]
+type Balance struct {
+	Total     decimal.Decimal
+	Available decimal.Decimal
 }
 
 /*

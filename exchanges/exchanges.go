@@ -8,10 +8,12 @@ import (
 
 // All Exchanges must follow this interface
 type Exchange interface {
+	GetMarketKey(base string, market string) string
 	GetBitcoinMarkets() ([]*Market, error)
 	GetCandles(tradingPair string, interval string) ([]*charts.Candle, error)
 	GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error)
-	ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error)
+	ExecuteLimitBuy(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error)
+	ExecuteLimitSell(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error)
 	GetBalances() ([]*Balance, error)
 }
 
@@ -26,7 +28,8 @@ type Market struct {
 
 type Balance struct {
 	BaseCurrency string
-	Amount       decimal.Decimal
+	Total        decimal.Decimal
+	Available    decimal.Decimal
 }
 
 var Intervals = map[string]map[string]string{

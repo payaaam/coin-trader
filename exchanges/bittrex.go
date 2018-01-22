@@ -1,7 +1,9 @@
 package exchanges
 
 import (
+	"fmt"
 	"github.com/payaaam/coin-trader/charts"
+	"github.com/shopspring/decimal"
 	"github.com/toorop/go-bittrex"
 )
 
@@ -82,10 +84,18 @@ func (b *BittrexClient) GetBitcoinMarkets() ([]*Market, error) {
 	return bittrexMarkets, nil
 }
 
-func (b *BittrexClient) ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error) {
+func (b *BittrexClient) ExecuteLimitBuy(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error) {
+	return "", nil
+}
+
+func (b *BittrexClient) ExecuteLimitSell(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error) {
 	return "", nil
 }
 
 func (b *BittrexClient) GetBalances() ([]*Balance, error) {
 	return nil, nil
+}
+
+func (b *BittrexClient) GetMarketKey(base string, market string) string {
+	return fmt.Sprintf("%s-%s", base, market)
 }

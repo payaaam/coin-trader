@@ -9,11 +9,13 @@ var TableNames = struct {
 	Exchange       string
 	GorpMigrations string
 	Market         string
+	Order          string
 	Tick           string
 }{
 	Chart:          "chart",
 	Exchange:       "exchange",
 	GorpMigrations: "gorp_migrations",
 	Market:         "market",
+	Order:          "order",
 	Tick:           "tick",
 }
