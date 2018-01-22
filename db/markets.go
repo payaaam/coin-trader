@@ -11,7 +11,7 @@ type MarketStore struct {
 	db *sql.DB
 }
 
-func NewMarketStore(db *sql.DB) *MarketStore {
+func NewMarketStore(db *sql.DB) MarketStoreInterface {
 	return &MarketStore{
 		db: db,
 	}

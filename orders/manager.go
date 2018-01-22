@@ -15,10 +15,10 @@ type Manager struct {
 	Balances   map[string]*Balance
 	OpenOrders []*OpenOrder
 	client     exchanges.Exchange
-	orderStore *db.OrderStore
+	orderStore db.OrderStoreInterface
 }
 
-func NewManager(client exchanges.Exchange, os *db.OrderStore) (OrderManager, error) {
+func NewManager(client exchanges.Exchange, os db.OrderStoreInterface) OrderManager {
 	manager := &Manager{
 		Balances:   make(map[string]*Balance),
 		OpenOrders: []*OpenOrder{},
@@ -26,26 +26,44 @@ func NewManager(client exchanges.Exchange, os *db.OrderStore) (OrderManager, err
 		orderStore: os,
 	}
 
-	err := manager.loadBalances()
+	return manager
+}
+
+// Loads balances and start the open order monitor
+func (m *Manager) Setup() error {
+	err := m.loadBalances()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Start goroutine for processing open orders if they exist
-	go manager.startOpenOrderManager()
-
-	return manager, nil
+	go m.startOpenOrderMonitor()
+	return nil
 }
 
-func (m *Manager) startOpenOrderManager() {
+func (m *Manager) startOpenOrderMonitor() {
 	ticker := time.NewTicker(time.Second * 10)
-	for ticker := range ticker.C {
+	for _ = range ticker.C {
 		if len(m.OpenOrders) == 0 {
 			continue
 		}
 
 		m.processOpenOrders()
 	}
+}
+
+func (m *Manager) loadBalances() error {
+	// Get your balances from exchange
+	balances, err := m.client.GetBalances()
+	if err != nil {
+		return err
+	}
+
+	for _, balance := range balances {
+		m.setBalance(balance.BaseCurrency, balance.Total, balance.Available)
+	}
+
+	return nil
 }
 
 func (m *Manager) ExecuteLimitBuy(ctx context.Context, exchange string, order *LimitOrder) error {
@@ -58,7 +76,7 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, exchange string, order *L
 	if err != nil {
 		return err
 	}
-	m.createOpenBuyOrder(order)
+	m.createOpenBuyOrder(ctx, order)
 	return nil
 }
 
@@ -72,22 +90,24 @@ func (m *Manager) ExecuteLimitSell(ctx context.Context, exchange string, order *
 	if err != nil {
 		return err
 	}
-	m.createOpenSellOrder(order)
+	m.createOpenSellOrder(ctx, order)
 
 	return nil
 }
 
 func (m *Manager) processOpenOrders() {
-	for _, openOrder := range m.OpenOrders {
-		// Get Order Status from bittrex
-		// If order is closed
-		//  - Update Balance
-		//  - Update Database
-		//  - Check for Timeout
-	}
+	/*
+		for _, openOrder := range m.OpenOrders {
+			// Get Order Status from bittrex
+			// If order is closed
+			//  - Update Balance
+			//  - Update Database
+			//  - Check for Timeout
+		}
+	*/
 }
 
-func (m *Manager) createOpenBuyOrder(order *LimitOrder) error {
+func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) error {
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
 	orderID, err := m.client.ExecuteLimitBuy(marketKey, order.Limit, order.Quantity)
@@ -107,7 +127,7 @@ func (m *Manager) createOpenBuyOrder(order *LimitOrder) error {
 
 	// Save Order to the database
 	orderModel := convertToOrderModel(openOrder)
-	err = m.orderStore.Save(orderModel)
+	err = m.orderStore.Save(ctx, orderModel)
 	if err != nil {
 		return err
 	}
@@ -115,7 +135,7 @@ func (m *Manager) createOpenBuyOrder(order *LimitOrder) error {
 	return nil
 }
 
-func (m *Manager) createOpenSellOrder(order *LimitOrder) error {
+func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) error {
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 	orderID, err := m.client.ExecuteLimitSell(marketKey, order.Limit, order.Quantity)
 	if err != nil {
@@ -134,23 +154,9 @@ func (m *Manager) createOpenSellOrder(order *LimitOrder) error {
 
 	// Save Order to the database
 	orderModel := convertToOrderModel(openOrder)
-	err = m.orderStore.Save(orderModel)
+	err = m.orderStore.Save(ctx, orderModel)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (m *Manager) loadBalances() error {
-	// Get your balances from exchange
-	balances, err := m.client.GetBalances()
-	if err != nil {
-		return err
-	}
-
-	for _, balance := range balances {
-		m.setBalance(balance.BaseCurrency, balance.Total, balance.Available)
 	}
 
 	return nil

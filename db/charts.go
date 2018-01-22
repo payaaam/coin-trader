@@ -10,7 +10,7 @@ type ChartStore struct {
 	db *sql.DB
 }
 
-func NewChartStore(db *sql.DB) *ChartStore {
+func NewChartStore(db *sql.DB) ChartStoreInterface {
 	return &ChartStore{
 		db: db,
 	}

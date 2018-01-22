@@ -34,6 +34,18 @@
 			"revisionTime": "2017-07-15T19:24:08Z"
 		},
 		{
+			"checksumSHA1": "L1EnSrVt8iXe1VtEfYopRet5+N8=",
+			"path": "github.com/golang/mock/gomock",
+			"revision": "c7d0ee73a597d1349404607d9f692cacd09cdc06",
+			"revisionTime": "2017-09-16T22:02:29Z"
+		},
+		{
+			"checksumSHA1": "2svmeJ4NTgmzZWJVXF16ZQEVXNc=",
+			"path": "github.com/golang/mock/mockgen",
+			"revision": "c7d0ee73a597d1349404607d9f692cacd09cdc06",
+			"revisionTime": "2017-09-16T22:02:29Z"
+		},
+		{
 			"checksumSHA1": "QWnVAOSYoXj3fXNLpQCMzH8kAL0=",
 			"path": "github.com/gorilla/websocket",
 			"revision": "d965e9adc66deebadcc7d0c6c7598e2a4baa7838",
