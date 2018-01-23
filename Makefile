@@ -4,10 +4,10 @@ models:
 mocks: mock-db mock-exchange
 
 mock-db:
-	mockgen -source=./db/db.go -destination=./db/mock-db.go -package=db
+	mockgen -source=./db/db.go -destination=./mocks/db.go -package=mocks
 
 mock-exchange:
-	mockgen -source=./exchanges/exchanges.go -destination=./exchanges/mock-exchange.go -package=exchanges
+	mockgen -source=./exchanges/exchanges.go -destination=./mocks/exchanges.go -package=mocks -imports .=github.com/payaaam/coin-trader/exchanges
 
 cli:
 	go build -o bin/cli cmd/cli/*.go

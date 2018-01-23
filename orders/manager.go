@@ -7,6 +7,7 @@ import (
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"time"
 )
@@ -66,7 +67,7 @@ func (m *Manager) loadBalances() error {
 	return nil
 }
 
-func (m *Manager) ExecuteLimitBuy(ctx context.Context, exchange string, order *LimitOrder) error {
+func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error {
 	balance := m.getBalance(order.BaseCurrency)
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
@@ -80,7 +81,7 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, exchange string, order *L
 	return nil
 }
 
-func (m *Manager) ExecuteLimitSell(ctx context.Context, exchange string, order *LimitOrder) error {
+func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error {
 	balance := m.getBalance(order.MarketCurrency)
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
@@ -174,6 +175,7 @@ func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decima
 }
 
 func (m *Manager) getBalance(marketKey string) decimal.Decimal {
+	log.Info(marketKey)
 	return m.Balances[utils.Normalize(marketKey)].Available
 }
 

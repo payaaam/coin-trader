@@ -10,8 +10,9 @@ import (
 )
 
 type OrderManager interface {
-	ExecuteLimitSell(ctx context.Context, change string, order *LimitOrder) error
-	ExecuteLimitBuy(ctx context.Context, exchange string, order *LimitOrder) error
+	Setup() error
+	ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
+	ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error
 }
 
 var BuyOrder = "buy"
