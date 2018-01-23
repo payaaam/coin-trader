@@ -32,6 +32,7 @@ func TestExecuteLimitBuySuccess(t *testing.T) {
 	})
 
 	exchange.EXPECT().GetBalances().Return(balances, nil)
+	exchange.EXPECT().GetMarketKey("BTC", "LTC").Return("btc-ltc")
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
