@@ -11,6 +11,8 @@ import (
 
 type OrderManager interface {
 	Setup() error
+	GetOpenOrders() []*OpenOrder
+	GetBalances() map[string]*Balance
 	ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
 	ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error
 }

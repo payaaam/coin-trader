@@ -22,13 +22,13 @@ var MinuteStartOfNewDay = 10
 
 type TickerCommand struct {
 	config         *Config
-	marketStore    *db.MarketStore
-	chartStore     *db.ChartStore
-	tickStore      *db.TickStore
+	marketStore    db.MarketStoreInterface
+	chartStore     db.ChartStoreInterface
+	tickStore      db.TickStoreInterface
 	exchangeClient exchanges.Exchange
 }
 
-func NewTickerCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore, client exchanges.Exchange) *TickerCommand {
+func NewTickerCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange) *TickerCommand {
 	return &TickerCommand{
 		config:         config,
 		marketStore:    marketStore,

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/payaaam/coin-trader/db/models"
+	"github.com/payaaam/coin-trader/utils"
 	"github.com/volatiletech/sqlboiler/queries/qm"
 	"golang.org/x/net/context"
 )
@@ -32,9 +33,10 @@ func (m *MarketStore) GetMarkets(ctx context.Context, exchange string) ([]*model
 }
 
 func (m *MarketStore) GetMarket(ctx context.Context, exchangeName string, marketKey string) (*models.Market, error) {
+
 	market, err := models.Markets(m.db,
 		qm.Where("exchange_name=?", exchangeName),
-		qm.And("market_key=?", marketKey),
+		qm.And("market_key=?", utils.Normalize(marketKey)),
 	).One()
 
 	if err != nil {

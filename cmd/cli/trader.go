@@ -20,13 +20,13 @@ const TickerSeconds = 10
 
 type TraderCommand struct {
 	config         *Config
-	marketStore    *db.MarketStore
-	chartStore     *db.ChartStore
-	tickStore      *db.TickStore
+	marketStore    db.MarketStoreInterface
+	chartStore     db.ChartStoreInterface
+	tickStore      db.TickStoreInterface
 	exchangeClient exchanges.Exchange
 }
 
-func NewTraderCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore, client exchanges.Exchange) *TraderCommand {
+func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange) *TraderCommand {
 	return &TraderCommand{
 		config:         config,
 		marketStore:    marketStore,

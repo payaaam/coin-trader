@@ -13,20 +13,21 @@ import (
 )
 
 type Manager struct {
-	Balances   map[string]*Balance
-	OpenOrders []*OpenOrder
-	client     exchanges.Exchange
-	orderStore db.OrderStoreInterface
+	Balances    map[string]*Balance
+	OpenOrders  []*OpenOrder
+	client      exchanges.Exchange
+	orderStore  db.OrderStoreInterface
+	marketStore db.MarketStoreInterface
 }
 
-func NewManager(client exchanges.Exchange, os db.OrderStoreInterface) OrderManager {
+func NewManager(client exchanges.Exchange, os db.OrderStoreInterface, ms db.MarketStoreInterface) OrderManager {
 	manager := &Manager{
-		Balances:   make(map[string]*Balance),
-		OpenOrders: []*OpenOrder{},
-		client:     client,
-		orderStore: os,
+		Balances:    make(map[string]*Balance),
+		OpenOrders:  []*OpenOrder{},
+		client:      client,
+		orderStore:  os,
+		marketStore: ms,
 	}
-
 	return manager
 }
 
@@ -40,6 +41,14 @@ func (m *Manager) Setup() error {
 	// Start goroutine for processing open orders if they exist
 	go m.startOpenOrderMonitor()
 	return nil
+}
+
+func (m *Manager) GetOpenOrders() []*OpenOrder {
+	return m.OpenOrders
+}
+
+func (m *Manager) GetBalances() map[string]*Balance {
+	return m.Balances
 }
 
 func (m *Manager) startOpenOrderMonitor() {
@@ -77,7 +86,11 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error 
 	if err != nil {
 		return err
 	}
-	m.createOpenBuyOrder(ctx, order)
+	err = m.createOpenBuyOrder(ctx, order)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -91,7 +104,10 @@ func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
 	if err != nil {
 		return err
 	}
-	m.createOpenSellOrder(ctx, order)
+	err = m.createOpenSellOrder(ctx, order)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -128,6 +144,12 @@ func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) err
 
 	// Save Order to the database
 	orderModel := convertToOrderModel(openOrder)
+	market, err := m.marketStore.GetMarket(ctx, "bittrex", marketKey)
+	if err != nil {
+		return err
+	}
+
+	orderModel.MarketID = market.ID
 	err = m.orderStore.Save(ctx, orderModel)
 	if err != nil {
 		return err

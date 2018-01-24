@@ -39,7 +39,7 @@ func getExchangeClient(config *Config, exchange string) (exchanges.Exchange, err
 }
 
 // Determines if the CLI should fetch all ticks, or just latest
-func shouldFetchAllTicks(ctx context.Context, tickStore *db.TickStore, chartID int, interval string) (bool, error) {
+func shouldFetchAllTicks(ctx context.Context, tickStore db.TickStoreInterface, chartID int, interval string) (bool, error) {
 	latestCandle, err := tickStore.GetLatestChartCandle(ctx, chartID)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -58,7 +58,7 @@ func shouldFetchAllTicks(ctx context.Context, tickStore *db.TickStore, chartID i
 	return false, nil
 }
 
-func loadChart(ctx context.Context, chartStore *db.ChartStore, marketID int, interval string) (*models.Chart, error) {
+func loadChart(ctx context.Context, chartStore db.ChartStoreInterface, marketID int, interval string) (*models.Chart, error) {
 	chart := &models.Chart{
 		MarketID: marketID,
 		Interval: interval,
@@ -72,7 +72,7 @@ func loadChart(ctx context.Context, chartStore *db.ChartStore, marketID int, int
 	return chart, nil
 }
 
-func loadMarkets(ctx context.Context, marketStore *db.MarketStore, client exchanges.Exchange, exchange string) error {
+func loadMarkets(ctx context.Context, marketStore db.MarketStoreInterface, client exchanges.Exchange, exchange string) error {
 	log.Debug("Loading BTC Markets")
 	markets, err := client.GetBitcoinMarkets()
 	if err != nil {
@@ -99,7 +99,7 @@ func loadMarkets(ctx context.Context, marketStore *db.MarketStore, client exchan
 }
 
 // Loads all ticks exchange
-func loadTicks(ctx context.Context, tickStore *db.TickStore, client exchanges.Exchange, chartID int, marketKey string, interval string) error {
+func loadTicks(ctx context.Context, tickStore db.TickStoreInterface, client exchanges.Exchange, chartID int, marketKey string, interval string) error {
 	logInfo(marketKey, interval, "Fetched All Ticks")
 	clientInterval := exchanges.Intervals["bittrex"][interval]
 	candles, err := client.GetCandles(marketKey, clientInterval)
@@ -117,7 +117,7 @@ func loadTicks(ctx context.Context, tickStore *db.TickStore, client exchanges.Ex
 }
 
 // Loads the latest tick for a marketKey. This API is inexpensive
-func loadLatestTick(ctx context.Context, tickStore *db.TickStore, client exchanges.Exchange, chartID int, marketKey string, interval string) error {
+func loadLatestTick(ctx context.Context, tickStore db.TickStoreInterface, client exchanges.Exchange, chartID int, marketKey string, interval string) error {
 	logInfo(marketKey, interval, "Fetched Latest Ticks")
 	clientInterval := exchanges.Intervals["bittrex"][interval]
 	candle, err := client.GetLatestCandle(marketKey, clientInterval)
