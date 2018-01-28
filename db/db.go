@@ -31,6 +31,7 @@ var IntervalMilliseconds = map[string]int{
 }
 
 type OrderStoreInterface interface {
+	Upsert(ctx context.Context, order *models.Order) error
 	Save(ctx context.Context, order *models.Order) error
 }
 

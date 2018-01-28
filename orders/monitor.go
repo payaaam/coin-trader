@@ -6,12 +6,13 @@ import (
 )
 
 type Monitor struct {
-	openOrders []*OpenOrder
-	ticker     *time.Ticker
-	client     exchanges.Exchange
+	openOrders   []*OpenOrder
+	ticker       *time.Ticker
+	client       exchanges.Exchange
+	orderUpdates chan *OpenOrder
 }
 
-func NewMonitor(client exchanges.Exchange, tickerIntervalSeconds int) OrderMonitor {
+func NewMonitor(client exchanges.Exchange, orderUpdates chan *OpenOrder, tickerIntervalSeconds int) OrderMonitor {
 	return &Monitor{
 		openOrders: []*OpenOrder{},
 		ticker:     time.NewTicker(time.Second * time.Duration(tickerIntervalSeconds)),
@@ -58,6 +59,7 @@ func (m *Monitor) Execute(order *OpenOrder) (string, error) {
 
 // Starts listening for open orders
 func (m *Monitor) Start(orderChannel chan *OpenOrder) {
+	m.orderUpdates = orderChannel
 	if m.ticker == nil {
 		return
 	}
@@ -66,11 +68,11 @@ func (m *Monitor) Start(orderChannel chan *OpenOrder) {
 			continue
 		}
 
-		m.process(orderChannel)
+		m.process()
 	}
 }
 
-func (m *Monitor) process(orderChannel chan *OpenOrder) {
+func (m *Monitor) process() {
 	/*
 		for _, openOrder := range m.OpenOrders {
 			// Get Order Status from bittrex

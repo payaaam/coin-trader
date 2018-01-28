@@ -6,28 +6,28 @@ import (
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
-	//log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"time"
 )
 
 type Manager struct {
-	Balances       map[string]*Balance
-	monitor        OrderMonitor
-	client         exchanges.Exchange
-	orderStore     db.OrderStoreInterface
-	marketStore    db.MarketStoreInterface
-	monitorChannel chan *OpenOrder
+	Balances     map[string]*Balance
+	monitor      OrderMonitor
+	client       exchanges.Exchange
+	orderStore   db.OrderStoreInterface
+	marketStore  db.MarketStoreInterface
+	orderUpdates chan *OpenOrder
 }
 
-func NewManager(monitor OrderMonitor, client exchanges.Exchange, os db.OrderStoreInterface, ms db.MarketStoreInterface) OrderManager {
+func NewManager(monitor OrderMonitor, orderUpdates chan *OpenOrder, client exchanges.Exchange, os db.OrderStoreInterface, ms db.MarketStoreInterface) OrderManager {
 	manager := &Manager{
-		Balances:       make(map[string]*Balance),
-		monitor:        monitor,
-		client:         client,
-		orderStore:     os,
-		marketStore:    ms,
-		monitorChannel: make(chan *OpenOrder),
+		Balances:     make(map[string]*Balance),
+		monitor:      monitor,
+		client:       client,
+		orderStore:   os,
+		marketStore:  ms,
+		orderUpdates: orderUpdates,
 	}
 	return manager
 }
@@ -40,7 +40,7 @@ func (m *Manager) Setup() error {
 	}
 
 	// Start goroutine for processing open orders if they exist
-	go m.monitor.Start(m.monitorChannel)
+	go m.monitor.Start(m.orderUpdates)
 
 	// Start listening for order updates
 	go m.startOrderListener()
@@ -111,14 +111,7 @@ func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) err
 	openOrder.ID = orderID
 
 	// Save Order to the database
-	orderModel := convertToOrderModel(openOrder)
-	market, err := m.marketStore.GetMarket(ctx, "bittrex", marketKey)
-	if err != nil {
-		return err
-	}
-
-	orderModel.MarketID = market.ID
-	err = m.orderStore.Save(ctx, orderModel)
+	err = m.saveOpenOrder(ctx, openOrder)
 	if err != nil {
 		return err
 	}
@@ -148,14 +141,7 @@ func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) er
 	openOrder.ID = orderID
 
 	// Save Order to the database
-	orderModel := convertToOrderModel(openOrder)
-	market, err := m.marketStore.GetMarket(ctx, "bittrex", marketKey)
-	if err != nil {
-		return err
-	}
-
-	orderModel.MarketID = market.ID
-	err = m.orderStore.Save(ctx, orderModel)
+	err = m.saveOpenOrder(ctx, openOrder)
 	if err != nil {
 		return err
 	}
@@ -166,10 +152,38 @@ func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) er
 func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) error {
 	switch order.Status {
 	case OpenOrderStatus:
+		log.Info("INSIDE OPEN ORDER STATUS WOOO")
 		// Check order placed time
 		// If longer than timeout, cancel order
 		return nil
 	case FilledOrderStatus:
+		if order.Type == BuyOrder {
+			baseBalance := m.getBalance(order.BaseCurrency)
+			marketBalance := m.getBalance(order.MarketCurrency)
+			originalCost := order.Limit.Mul(order.Quantity)
+			actualCost := order.TradePrice.Mul(order.Quantity)
+
+			// Update Base Currency Balance (BTC)
+			baseBalance.Available = baseBalance.Available.Add(originalCost)
+			baseBalance.Available = baseBalance.Available.Sub(actualCost)
+			baseBalance.Total = baseBalance.Total.Sub(actualCost)
+
+			// Update Market Currency
+			marketBalance.Available = marketBalance.Available.Add(order.Quantity)
+			marketBalance.Total = marketBalance.Total.Add(order.Quantity)
+
+			// Update Order in Database
+			err := m.saveOpenOrder(context.Background(), order)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Add the limit * quantity back to Available
+		// Calcualte total cost and remove from Available
+		// remove from Total
+		// Add Quantity to Market or CBase depending on buy or sell
+		log.Info("FILLED ORDER WOOHOO")
 		return nil
 	case PartiallyFieldOrderStatus:
 		return nil
@@ -214,7 +228,7 @@ func (m *Manager) updateBalanceFromInitialOrder(orderType string, order *LimitOr
 // Starts listening on the monitorChannel
 func (m *Manager) startOrderListener() {
 	for {
-		updatedOrder := <-m.monitorChannel
+		updatedOrder := <-m.orderUpdates
 		m.updateBalanceFromOpenOrder(updatedOrder)
 	}
 }
@@ -250,4 +264,21 @@ func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decima
 // Get Available Balance
 func (m *Manager) getBalance(marketKey string) *Balance {
 	return m.Balances[utils.Normalize(marketKey)]
+}
+
+func (m *Manager) saveOpenOrder(ctx context.Context, openOrder *OpenOrder) error {
+	// Save Order to the database
+	orderModel := convertToOrderModel(openOrder)
+	market, err := m.marketStore.GetMarket(ctx, "bittrex", openOrder.MarketKey)
+	if err != nil {
+		return err
+	}
+
+	orderModel.MarketID = market.ID
+	err = m.orderStore.Upsert(ctx, orderModel)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

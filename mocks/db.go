@@ -35,6 +35,18 @@ func (m *MockOrderStoreInterface) EXPECT() *MockOrderStoreInterfaceMockRecorder 
 	return m.recorder
 }
 
+// Upsert mocks base method
+func (m *MockOrderStoreInterface) Upsert(ctx context.Context, order *models.Order) error {
+	ret := m.ctrl.Call(m, "Upsert", ctx, order)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert
+func (mr *MockOrderStoreInterfaceMockRecorder) Upsert(ctx, order interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockOrderStoreInterface)(nil).Upsert), ctx, order)
+}
+
 // Save mocks base method
 func (m *MockOrderStoreInterface) Save(ctx context.Context, order *models.Order) error {
 	ret := m.ctrl.Call(m, "Save", ctx, order)

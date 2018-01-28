@@ -115,13 +115,13 @@ func (mr *MockOrderMonitorMockRecorder) Start(arg0 interface{}) *gomock.Call {
 }
 
 // process mocks base method
-func (m *MockOrderMonitor) process(arg0 chan *OpenOrder) {
-	m.ctrl.Call(m, "process", arg0)
+func (m *MockOrderMonitor) process() {
+	m.ctrl.Call(m, "process")
 }
 
 // process indicates an expected call of process
-func (mr *MockOrderMonitorMockRecorder) process(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "process", reflect.TypeOf((*MockOrderMonitor)(nil).process), arg0)
+func (mr *MockOrderMonitorMockRecorder) process() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "process", reflect.TypeOf((*MockOrderMonitor)(nil).process))
 }
 
 // GetOrders mocks base method

@@ -8,9 +8,12 @@ import (
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/mocks"
 	"github.com/payaaam/coin-trader/utils"
+	//log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 	"testing"
+	"time"
+	//"time"
 )
 
 var BaseCurrency = "BTC"
@@ -23,11 +26,24 @@ var orderID = "some-order-id"
 var ctx = context.Background()
 var marketID = 1
 
-func TestBuySuccess(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+type ManagerTestConfig struct {
+	Exchange           *mocks.MockExchange
+	OrderStore         *mocks.MockOrderStoreInterface
+	MarketStore        *mocks.MockMarketStoreInterface
+	OrderMonitor       *MockOrderMonitor
+	OrderUpdateChannel chan *OpenOrder
+}
 
-	balances := getTestBalances("BTC", "2.0")
+func TestBuySuccess(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(BuyOrder)
 	marketModel := getTestMarket()
@@ -38,7 +54,7 @@ func TestBuySuccess(t *testing.T) {
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
 	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
-	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(nil)
+	orderStore.EXPECT().Upsert(ctx, orderModelMatcher).Return(nil)
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
@@ -59,10 +75,16 @@ func TestBuySuccess(t *testing.T) {
 }
 
 func TestBuyExecuteError(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
-	balances := getTestBalances("BTC", "2.0")
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(BuyOrder)
 
@@ -84,10 +106,15 @@ func TestBuyExecuteError(t *testing.T) {
 }
 
 func TestBuyOrderStoreError(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("BTC", "2.0")
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(BuyOrder)
 	marketModel := getTestMarket()
@@ -98,7 +125,7 @@ func TestBuyOrderStoreError(t *testing.T) {
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
 	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
-	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(someError)
+	orderStore.EXPECT().Upsert(ctx, orderModelMatcher).Return(someError)
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
@@ -113,10 +140,15 @@ func TestBuyOrderStoreError(t *testing.T) {
 }
 
 func TestBuyMarketStoreError(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("BTC", "2.0")
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(BuyOrder)
 
@@ -139,10 +171,15 @@ func TestBuyMarketStoreError(t *testing.T) {
 }
 
 func TestBuyInsufficentFunds(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("BTC", "0.0")
+	balances := getTestBalances("0.0", "0.0", "0.0", "0.0")
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -162,10 +199,15 @@ func TestBuyInsufficentFunds(t *testing.T) {
 // SELL
 
 func TestSellSuccess(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("LTC", "2.0")
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(SellOrder)
 	marketModel := getTestMarket()
@@ -176,7 +218,7 @@ func TestSellSuccess(t *testing.T) {
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
 	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
-	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(nil)
+	orderStore.EXPECT().Upsert(ctx, orderModelMatcher).Return(nil)
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
@@ -197,10 +239,15 @@ func TestSellSuccess(t *testing.T) {
 }
 
 func TestSellExecuteError(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("LTC", "2.0")
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(SellOrder)
 	marketModel := getTestMarket()
@@ -211,7 +258,7 @@ func TestSellExecuteError(t *testing.T) {
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
 	orderMonitor.EXPECT().Execute(openOrderMatcher).Return("", someError)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
-	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(nil)
+	orderStore.EXPECT().Upsert(ctx, orderModelMatcher).Return(nil)
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
@@ -226,10 +273,15 @@ func TestSellExecuteError(t *testing.T) {
 }
 
 func TestSellOrderStoreError(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("LTC", "2.0")
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(SellOrder)
 	marketModel := getTestMarket()
@@ -240,7 +292,7 @@ func TestSellOrderStoreError(t *testing.T) {
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
 	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
-	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(someError)
+	orderStore.EXPECT().Upsert(ctx, orderModelMatcher).Return(someError)
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
@@ -255,10 +307,15 @@ func TestSellOrderStoreError(t *testing.T) {
 }
 
 func TestSellMarketStoreError(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("LTC", "2.0")
+	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
 	openOrderMatcher := getTestOpenOrder(SellOrder)
 
@@ -281,10 +338,15 @@ func TestSellMarketStoreError(t *testing.T) {
 }
 
 func TestSellInsufficentFunds(t *testing.T) {
-	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
-	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
-	balances := getTestBalances("LTC", "0.0")
+	balances := getTestBalances("0.0", "0.0", "0.0", "0.0")
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -299,6 +361,59 @@ func TestSellInsufficentFunds(t *testing.T) {
 		Quantity:       utils.StringToDecimal("10"),
 	})
 	assert.Equal(t, ErrNotEnoughFunds, err, "should return notEnoughFundsError")
+}
+
+func TestOpenOrderUpdate(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
+
+	marketModel := getTestMarket()
+	orderModelMatcher := getTestOrderModel(BuyOrder)
+
+	balances := getTestBalances("1.5", "2.0", "2.0", "2.0")
+	orderMonitor.EXPECT().Start(gomock.Any())
+	exchange.EXPECT().GetBalances().Return(balances, nil)
+	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
+	orderStore.EXPECT().Upsert(ctx, orderModelMatcher).Return(nil)
+
+	err := manager.Setup()
+	assert.Nil(t, err, "should not error")
+
+	orderUpdateChannel <- &OpenOrder{
+		Status: OpenOrderStatus,
+	}
+
+	time.Sleep(time.Millisecond * 10)
+	bMap := manager.GetBalances()
+	assert.True(t, bMap["btc"].Available.Equals(utils.StringToDecimal("1.5")), "should not update available balance for open order")
+	//assert.Equal(t, utils.StringToDecimal("1.5"), bMap["btc"].Available, "should not update available balance for open order")
+	assert.True(t, bMap["btc"].Total.Equals(utils.StringToDecimal("2.0")), "should not update total balance for open order")
+	//assert.Equal(t, utils.StringToDecimal("2.0"), bMap["btc"].Total, "should not update total balance for open order")
+
+	orderUpdateChannel <- &OpenOrder{
+		ID:             orderID,
+		Type:           BuyOrder,
+		Status:         FilledOrderStatus,
+		MarketKey:      "btc-ltc",
+		MarketCurrency: "LTC",
+		BaseCurrency:   "BTC",
+		Limit:          utils.StringToDecimal(limit),
+		Quantity:       utils.StringToDecimal(quantity),
+		TradePrice:     utils.StringToDecimal("0.045"),
+	}
+
+	time.Sleep(time.Millisecond * 10)
+	bMap = manager.GetBalances()
+	assert.True(t, bMap["btc"].Available.Equals(utils.StringToDecimal("1.55")), "should update available balance on filled order")
+	assert.True(t, bMap["btc"].Total.Equals(utils.StringToDecimal("1.55")), "should update available balance on filled order")
+
+	assert.True(t, bMap["ltc"].Available.Equals(utils.StringToDecimal("12.0")), "should update available balance on filled order")
+	assert.True(t, bMap["ltc"].Total.Equals(utils.StringToDecimal("12.0")), "should update available balance on filled order")
 }
 
 func getTestMarket() *models.Market {
@@ -330,24 +445,31 @@ func getTestOpenOrder(orderType string) *OpenOrderMatcher {
 	}
 }
 
-func newMockDependencies(t *testing.T) (*mocks.MockExchange, *mocks.MockOrderStoreInterface, *mocks.MockMarketStoreInterface, *MockOrderMonitor) {
+func newMockDependencies(t *testing.T) *ManagerTestConfig {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockExchange := mocks.NewMockExchange(mockCtrl)
-	mockOrderStore := mocks.NewMockOrderStoreInterface(mockCtrl)
-	mockMarketStore := mocks.NewMockMarketStoreInterface(mockCtrl)
-	mockOrderMonitor := NewMockOrderMonitor(mockCtrl)
-
-	return mockExchange, mockOrderStore, mockMarketStore, mockOrderMonitor
+	return &ManagerTestConfig{
+		Exchange:           mocks.NewMockExchange(mockCtrl),
+		OrderStore:         mocks.NewMockOrderStoreInterface(mockCtrl),
+		MarketStore:        mocks.NewMockMarketStoreInterface(mockCtrl),
+		OrderMonitor:       NewMockOrderMonitor(mockCtrl),
+		OrderUpdateChannel: make(chan *OpenOrder),
+	}
 }
 
-func getTestBalances(currency string, balance string) []*exchanges.Balance {
+func getTestBalances(baseAvailable, baseTotal, marketAvailable, marketTotal string) []*exchanges.Balance {
 	var balances []*exchanges.Balance
 	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: currency,
-		Total:        utils.StringToDecimal(balance),
-		Available:    utils.StringToDecimal(balance),
+		BaseCurrency: MarketCurrency,
+		Total:        utils.StringToDecimal(marketTotal),
+		Available:    utils.StringToDecimal(marketAvailable),
+	})
+
+	balances = append(balances, &exchanges.Balance{
+		BaseCurrency: BaseCurrency,
+		Total:        utils.StringToDecimal(baseTotal),
+		Available:    utils.StringToDecimal(baseAvailable),
 	})
 
 	return balances

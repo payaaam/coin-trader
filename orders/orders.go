@@ -18,7 +18,7 @@ type OrderManager interface {
 
 type OrderMonitor interface {
 	Start(chan *OpenOrder)
-	process(chan *OpenOrder)
+	process()
 	GetOrders() []*OpenOrder
 	Execute(order *OpenOrder) (string, error)
 }
