@@ -44,3 +44,11 @@ func (b *BinanceClient) GetBalances() ([]*Balance, error) {
 func (b *BinanceClient) GetMarketKey(base string, market string) string {
 	return fmt.Sprintf("%s%s", base, market)
 }
+
+func (b *BinanceClient) GetOrder(orderID string) (*Order, error) {
+	return nil, nil
+}
+
+func (b *BinanceClient) CancelOrder(orderID string) error {
+	return nil
+}

@@ -15,6 +15,8 @@ type Exchange interface {
 	ExecuteLimitBuy(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error)
 	ExecuteLimitSell(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error)
 	GetBalances() ([]*Balance, error)
+	GetOrder(orderID string) (*Order, error)
+	CancelOrder(orderID string) error
 }
 
 type Market struct {
@@ -30,6 +32,19 @@ type Balance struct {
 	BaseCurrency string
 	Total        decimal.Decimal
 	Available    decimal.Decimal
+}
+
+type Order struct {
+	Type           string
+	MarketKey      string
+	OpenTimestamp  int64
+	CloseTimestamp int64
+	Quantity       decimal.Decimal
+	Limit          decimal.Decimal
+	TradePrice     decimal.Decimal
+	QuantityFilled decimal.Decimal
+	Status         string
+	ID             string
 }
 
 var Intervals = map[string]map[string]string{

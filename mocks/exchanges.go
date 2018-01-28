@@ -124,3 +124,28 @@ func (m *MockExchange) GetBalances() ([]*Balance, error) {
 func (mr *MockExchangeMockRecorder) GetBalances() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalances", reflect.TypeOf((*MockExchange)(nil).GetBalances))
 }
+
+// GetOrder mocks base method
+func (m *MockExchange) GetOrder(orderID string) (*Order, error) {
+	ret := m.ctrl.Call(m, "GetOrder", orderID)
+	ret0, _ := ret[0].(*Order)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOrder indicates an expected call of GetOrder
+func (mr *MockExchangeMockRecorder) GetOrder(orderID interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrder", reflect.TypeOf((*MockExchange)(nil).GetOrder), orderID)
+}
+
+// CancelOrder mocks base method
+func (m *MockExchange) CancelOrder(orderID string) error {
+	ret := m.ctrl.Call(m, "CancelOrder", orderID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CancelOrder indicates an expected call of CancelOrder
+func (mr *MockExchangeMockRecorder) CancelOrder(orderID interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelOrder", reflect.TypeOf((*MockExchange)(nil).CancelOrder), orderID)
+}

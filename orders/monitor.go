@@ -2,6 +2,8 @@ package orders
 
 import (
 	"github.com/payaaam/coin-trader/exchanges"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -49,7 +51,7 @@ func (m *Monitor) Execute(order *OpenOrder) (string, error) {
 
 	// Check buy and sell errors
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(ErrExecuteFailure, err.Error())
 	}
 
 	order.ID = orderID
@@ -73,15 +75,30 @@ func (m *Monitor) Start(orderChannel chan *OpenOrder) {
 }
 
 func (m *Monitor) process() {
-	/*
-		for _, openOrder := range m.OpenOrders {
-			// Get Order Status from bittrex
-			// If order is closed
-			//  - Update Balance
-			//  - Update Database
-			//  - Check for Timeout
+	for index, _ := range m.openOrders {
+		order := m.openOrders[index]
+		// Fetch Latest Order Information
+		exchangeOrder, err := m.client.GetOrder(order.ID)
+		if err != nil {
+			log.Error(err)
+			continue
 		}
-	*/
+
+		// Update fields in order
+		updateOrder(order, exchangeOrder)
+
+		// Determine if the order has timed out
+		if order.hasReachedTimeout() && order.Status == OpenOrderStatus {
+			err := m.cancelOrder(order)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+		}
+
+		// Send updated order to channel for Manager
+		m.orderUpdates <- order
+	}
 }
 
 func (m *Monitor) GetOrders() []*OpenOrder {
@@ -90,4 +107,31 @@ func (m *Monitor) GetOrders() []*OpenOrder {
 
 func (m *Monitor) addOrder(order *OpenOrder) {
 	m.openOrders = append(m.openOrders, order)
+}
+
+func updateOrder(order *OpenOrder, exchangeOrder *exchanges.Order) {
+	order.QuantityFilled = exchangeOrder.QuantityFilled
+	order.TradePrice = exchangeOrder.TradePrice
+	if exchangeOrder.CloseTimestamp != 0 {
+		order.Status = FilledOrderStatus
+		order.CloseTimestamp = exchangeOrder.CloseTimestamp
+	}
+}
+
+func (m *Monitor) cancelOrder(order *OpenOrder) error {
+	err := m.client.CancelOrder(order.ID)
+	if err != nil {
+		return err
+	}
+
+	// Slight Delay for their system to update
+	time.Sleep(time.Millisecond * 10)
+
+	exchangeOrder, err := m.client.GetOrder(order.ID)
+	if err != nil {
+		return err
+	}
+
+	updateOrder(order, exchangeOrder)
+	return nil
 }

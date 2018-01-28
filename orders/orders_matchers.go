@@ -46,7 +46,7 @@ func (o *OpenOrderMatcher) Matches(order interface{}) bool {
 		return false
 	}
 
-	if toTest.OrderPlacedTimestamp == 0 {
+	if toTest.OpenTimestamp == 0 {
 		return false
 	}
 

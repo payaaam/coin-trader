@@ -5,6 +5,9 @@ import (
 )
 
 func TestExecuteBuy(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	monitor := NewMonitor(mockConfig.Exchange, mockConfig.OrderUpdateChannel, 1)
+	monitor.Start()
 
 	// Check calls for client
 	// Check orders array

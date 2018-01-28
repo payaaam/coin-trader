@@ -12,10 +12,13 @@
 # TODO
 
  ## HI PRIORITY
-1. Finish out monitor tests
- - (Manager) Add tests for failed execute and roll back balance
- - Add TEst for sell at limit
- - Add test for updating balance after sell at different limit
+1. Finish out manager order listener
+
+
+2. Finish out monitor tests
+ - DONE (Manager) Add tests for failed execute and roll back balance
+ - DONE Add TEst for sell at limit
+ - DONE Add test for updating balance after sell at different limit
 
 2. Finish out Trader
 
