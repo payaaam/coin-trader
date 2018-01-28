@@ -21,7 +21,7 @@ func hasAvailableFunds(balance decimal.Decimal, order *LimitOrder) bool {
 
 func convertToOrderModel(order *OpenOrder) *models.Order {
 	return &models.Order{
-		Type:            BuyOrder,
+		Type:            order.Type,
 		Limit:           order.Limit.String(),
 		Quantity:        order.Quantity.String(),
 		ExchangeOrderID: order.ID,

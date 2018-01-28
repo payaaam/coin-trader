@@ -11,15 +11,30 @@ import (
 
 type OrderManager interface {
 	Setup() error
-	GetOpenOrders() []*OpenOrder
 	GetBalances() map[string]*Balance
 	ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
 	ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error
 }
 
+type OrderMonitor interface {
+	Start(chan *OpenOrder)
+	process(chan *OpenOrder)
+	GetOrders() []*OpenOrder
+	Execute(order *OpenOrder) (string, error)
+}
+
+// OrderType
 var BuyOrder = "buy"
 var SellOrder = "sell"
+
+// OrderSTatus
+var OpenOrderStatus = "open"
+var FilledOrderStatus = "filled"
+var PartiallyFieldOrderStatus = "partially-filled"
+
 var ErrNotEnoughFunds = errors.New("not enough coins")
+var ErrInvalidOrderType = errors.New("invalid order type")
+var ErrInvalidOrderStatus = errors.New("invalid order status")
 
 // LimitOrder object to execute on an exchange
 type LimitOrder struct {
@@ -30,11 +45,17 @@ type LimitOrder struct {
 }
 
 type OpenOrder struct {
-	Type      string
-	MarketKey string
-	Quantity  decimal.Decimal
-	Limit     decimal.Decimal
-	ID        string
+	Type                 string
+	MarketKey            string
+	BaseCurrency         string
+	MarketCurrency       string
+	OrderPlacedTimestamp int64
+	OrderFilledTimestamp int64
+	Quantity             decimal.Decimal
+	Limit                decimal.Decimal
+	TradePrice           decimal.Decimal
+	Status               string
+	ID                   string
 }
 
 type Balance struct {

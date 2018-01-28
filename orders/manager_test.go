@@ -16,47 +16,27 @@ import (
 var BaseCurrency = "BTC"
 var MarketCurrency = "LTC"
 var MarketKey = "btc-ltc"
+var someError = errors.New("some error")
+var limit = "0.05"
+var quantity = "10"
+var orderID = "some-order-id"
+var ctx = context.Background()
+var marketID = 1
 
-func NewMockDependencies(t *testing.T) (*mocks.MockExchange, *mocks.MockOrderStoreInterface, *mocks.MockMarketStoreInterface) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+func TestBuySuccess(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
 
-	mockExchange := mocks.NewMockExchange(mockCtrl)
-	mockOrderStore := mocks.NewMockOrderStoreInterface(mockCtrl)
-	mockMarketStore := mocks.NewMockMarketStoreInterface(mockCtrl)
+	balances := getTestBalances("BTC", "2.0")
 
-	return mockExchange, mockOrderStore, mockMarketStore
-}
+	openOrderMatcher := getTestOpenOrder(BuyOrder)
+	marketModel := getTestMarket()
+	orderModelMatcher := getTestOrderModel(BuyOrder)
 
-func TestExecuteLimitBuySuccess(t *testing.T) {
-	exchange, orderStore, marketStore := NewMockDependencies(t)
-	manager := NewManager(exchange, orderStore, marketStore)
-
-	var balances []*exchanges.Balance
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: "BTC",
-		Total:        utils.StringToDecimal("2.0"),
-		Available:    utils.StringToDecimal("2.0"),
-	})
-
-	var limit = utils.StringToDecimal("0.05")
-	var quantity = utils.StringToDecimal("10")
-	var orderID = "some-order-id"
-	var ctx = context.Background()
-	marketModel := &models.Market{
-		ID: 1,
-	}
-
-	orderModelMatcher := &mocks.OrderModelMatcher{
-		MarketID:        marketModel.ID,
-		ExchangeOrderID: orderID,
-		Limit:           limit.String(),
-		Quantity:        quantity.String(),
-		Status:          db.OpenOrderStatus,
-	}
+	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
-	exchange.EXPECT().ExecuteLimitBuy(MarketKey, limit, quantity).Return(orderID, nil)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
 	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(nil)
 
@@ -71,33 +51,25 @@ func TestExecuteLimitBuySuccess(t *testing.T) {
 	})
 	assert.Nil(t, err, "should not return notEnoughFundsError")
 
-	assert.Equal(t, 1, len(manager.GetOpenOrders()), "should have 1 open order")
-	assert.Equal(t, orderID, manager.GetOpenOrders()[0].ID, "should have correct order id")
-
-	expectedBalance := utils.StringToDecimal("2").Sub(limit.Mul(quantity))
+	limitDecimal := utils.StringToDecimal(limit)
+	quantityDecimal := utils.StringToDecimal(quantity)
+	expectedBalance := utils.StringToDecimal("2").Sub(limitDecimal.Mul(quantityDecimal))
 	actualBalance := manager.GetBalances()["btc"].Available
 	assert.Equal(t, expectedBalance, actualBalance, "should deduct purchase price from balance")
 }
 
-func TestExecuteLimitBuyExchangeError(t *testing.T) {
-	exchange, orderStore, marketStore := NewMockDependencies(t)
-	manager := NewManager(exchange, orderStore, marketStore)
+func TestBuyExecuteError(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
 
-	var balances []*exchanges.Balance
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: "BTC",
-		Total:        utils.StringToDecimal("2.0"),
-		Available:    utils.StringToDecimal("2.0"),
-	})
+	balances := getTestBalances("BTC", "2.0")
 
-	var someError = errors.New("some error")
-	var limit = utils.StringToDecimal("0.05")
-	var quantity = utils.StringToDecimal("10")
-	var ctx = context.Background()
+	openOrderMatcher := getTestOpenOrder(BuyOrder)
 
+	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
-	exchange.EXPECT().ExecuteLimitBuy(MarketKey, limit, quantity).Return("", someError)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return("", someError)
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
@@ -105,42 +77,26 @@ func TestExecuteLimitBuyExchangeError(t *testing.T) {
 	err = manager.ExecuteLimitBuy(ctx, &LimitOrder{
 		BaseCurrency:   "BTC",
 		MarketCurrency: "LTC",
-		Limit:          utils.StringToDecimal("0.05"),
-		Quantity:       utils.StringToDecimal("10"),
+		Limit:          utils.StringToDecimal(limit),
+		Quantity:       utils.StringToDecimal(quantity),
 	})
 	assert.Equal(t, someError, err, "should return errors from exchange")
 }
 
-func TestExecuteLimitBuyOrderStoreError(t *testing.T) {
-	exchange, orderStore, marketStore := NewMockDependencies(t)
-	manager := NewManager(exchange, orderStore, marketStore)
+func TestBuyOrderStoreError(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
 
-	var balances []*exchanges.Balance
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: "BTC",
-		Total:        utils.StringToDecimal("2.0"),
-		Available:    utils.StringToDecimal("2.0"),
-	})
+	balances := getTestBalances("BTC", "2.0")
 
-	var someError = errors.New("some error")
-	var limit = utils.StringToDecimal("0.05")
-	var quantity = utils.StringToDecimal("10")
-	var orderID = "some-order-id"
-	var ctx = context.Background()
-	marketModel := &models.Market{
-		ID: 1,
-	}
+	openOrderMatcher := getTestOpenOrder(BuyOrder)
+	marketModel := getTestMarket()
+	orderModelMatcher := getTestOrderModel(BuyOrder)
 
-	orderModelMatcher := &mocks.OrderModelMatcher{
-		MarketID:        marketModel.ID,
-		ExchangeOrderID: orderID,
-		Limit:           limit.String(),
-		Quantity:        quantity.String(),
-		Status:          db.OpenOrderStatus,
-	}
+	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
-	exchange.EXPECT().ExecuteLimitBuy(MarketKey, limit, quantity).Return(orderID, nil)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
 	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(someError)
 
@@ -156,25 +112,18 @@ func TestExecuteLimitBuyOrderStoreError(t *testing.T) {
 	assert.Equal(t, someError, err, "should return errors from exchange")
 }
 
-func TestExecuteLimitBuyMarketStoreError(t *testing.T) {
-	exchange, orderStore, marketStore := NewMockDependencies(t)
-	manager := NewManager(exchange, orderStore, marketStore)
+func TestBuyMarketStoreError(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
 
-	var balances []*exchanges.Balance
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: "BTC",
-		Total:        utils.StringToDecimal("2.0"),
-		Available:    utils.StringToDecimal("2.0"),
-	})
+	balances := getTestBalances("BTC", "2.0")
 
-	var someError = errors.New("some error")
-	var limit = utils.StringToDecimal("0.05")
-	var quantity = utils.StringToDecimal("10")
-	var orderID = "some-order-id"
-	var ctx = context.Background()
+	openOrderMatcher := getTestOpenOrder(BuyOrder)
+
+	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
 	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
-	exchange.EXPECT().ExecuteLimitBuy(MarketKey, limit, quantity).Return(orderID, nil)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(nil, someError)
 
 	err := manager.Setup()
@@ -188,17 +137,14 @@ func TestExecuteLimitBuyMarketStoreError(t *testing.T) {
 	})
 	assert.Equal(t, someError, err, "should return errors from exchange")
 }
-func TestExecuteLimitBuyInsufficentFunds(t *testing.T) {
-	exchange, orderStore, marketStore := NewMockDependencies(t)
-	manager := NewManager(exchange, orderStore, marketStore)
 
-	var balances []*exchanges.Balance
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: "BTC",
-		Total:        utils.StringToDecimal("0.0"),
-		Available:    utils.StringToDecimal("0.0"),
-	})
+func TestBuyInsufficentFunds(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
 
+	balances := getTestBalances("BTC", "0.0")
+
+	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
 
 	err := manager.Setup()
@@ -211,4 +157,198 @@ func TestExecuteLimitBuyInsufficentFunds(t *testing.T) {
 		Quantity:       utils.StringToDecimal("10"),
 	})
 	assert.Equal(t, ErrNotEnoughFunds, err, "should return notEnoughFundsError")
+}
+
+// SELL
+
+func TestSellSuccess(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("LTC", "2.0")
+
+	openOrderMatcher := getTestOpenOrder(SellOrder)
+	marketModel := getTestMarket()
+	orderModelMatcher := getTestOrderModel(SellOrder)
+
+	orderMonitor.EXPECT().Start(gomock.Any())
+	exchange.EXPECT().GetBalances().Return(balances, nil)
+	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
+	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
+	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(nil)
+
+	err := manager.Setup()
+	assert.Nil(t, err, "should not error")
+
+	err = manager.ExecuteLimitSell(ctx, &LimitOrder{
+		BaseCurrency:   "BTC",
+		MarketCurrency: "LTC",
+		Limit:          utils.StringToDecimal("0.05"),
+		Quantity:       utils.StringToDecimal("10"),
+	})
+	assert.Nil(t, err, "should not return notEnoughFundsError")
+
+	limitDecimal := utils.StringToDecimal(limit)
+	quantityDecimal := utils.StringToDecimal(quantity)
+	expectedBalance := utils.StringToDecimal("2").Sub(limitDecimal.Mul(quantityDecimal))
+	actualBalance := manager.GetBalances()["ltc"].Available
+	assert.Equal(t, expectedBalance, actualBalance, "should deduct purchase price from balance")
+}
+
+func TestSellExecuteError(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("LTC", "2.0")
+
+	openOrderMatcher := getTestOpenOrder(SellOrder)
+	marketModel := getTestMarket()
+	orderModelMatcher := getTestOrderModel(SellOrder)
+
+	orderMonitor.EXPECT().Start(gomock.Any())
+	exchange.EXPECT().GetBalances().Return(balances, nil)
+	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return("", someError)
+	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
+	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(nil)
+
+	err := manager.Setup()
+	assert.Nil(t, err, "should not error")
+
+	err = manager.ExecuteLimitSell(ctx, &LimitOrder{
+		BaseCurrency:   "BTC",
+		MarketCurrency: "LTC",
+		Limit:          utils.StringToDecimal("0.05"),
+		Quantity:       utils.StringToDecimal("10"),
+	})
+	assert.Equal(t, someError, err, "should return errors from exchange")
+}
+
+func TestSellOrderStoreError(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("LTC", "2.0")
+
+	openOrderMatcher := getTestOpenOrder(SellOrder)
+	marketModel := getTestMarket()
+	orderModelMatcher := getTestOrderModel(SellOrder)
+
+	orderMonitor.EXPECT().Start(gomock.Any())
+	exchange.EXPECT().GetBalances().Return(balances, nil)
+	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
+	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
+	orderStore.EXPECT().Save(ctx, orderModelMatcher).Return(someError)
+
+	err := manager.Setup()
+	assert.Nil(t, err, "should not error")
+
+	err = manager.ExecuteLimitSell(ctx, &LimitOrder{
+		BaseCurrency:   "BTC",
+		MarketCurrency: "LTC",
+		Limit:          utils.StringToDecimal("0.05"),
+		Quantity:       utils.StringToDecimal("10"),
+	})
+	assert.Equal(t, someError, err, "should return errors from exchange")
+}
+
+func TestSellMarketStoreError(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("LTC", "2.0")
+
+	openOrderMatcher := getTestOpenOrder(SellOrder)
+
+	orderMonitor.EXPECT().Start(gomock.Any())
+	exchange.EXPECT().GetBalances().Return(balances, nil)
+	exchange.EXPECT().GetMarketKey(BaseCurrency, MarketCurrency).Return(MarketKey)
+	orderMonitor.EXPECT().Execute(openOrderMatcher).Return(orderID, nil)
+	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(nil, someError)
+
+	err := manager.Setup()
+	assert.Nil(t, err, "should not error")
+
+	err = manager.ExecuteLimitSell(ctx, &LimitOrder{
+		BaseCurrency:   "BTC",
+		MarketCurrency: "LTC",
+		Limit:          utils.StringToDecimal("0.05"),
+		Quantity:       utils.StringToDecimal("10"),
+	})
+	assert.Equal(t, someError, err, "should return errors from exchange")
+}
+
+func TestSellInsufficentFunds(t *testing.T) {
+	exchange, orderStore, marketStore, orderMonitor := newMockDependencies(t)
+	manager := NewManager(orderMonitor, exchange, orderStore, marketStore)
+
+	balances := getTestBalances("LTC", "0.0")
+
+	orderMonitor.EXPECT().Start(gomock.Any())
+	exchange.EXPECT().GetBalances().Return(balances, nil)
+
+	err := manager.Setup()
+	assert.Nil(t, err, "should not error")
+
+	err = manager.ExecuteLimitSell(context.Background(), &LimitOrder{
+		BaseCurrency:   "BTC",
+		MarketCurrency: "LTC",
+		Limit:          utils.StringToDecimal("0.05"),
+		Quantity:       utils.StringToDecimal("10"),
+	})
+	assert.Equal(t, ErrNotEnoughFunds, err, "should return notEnoughFundsError")
+}
+
+func getTestMarket() *models.Market {
+	return &models.Market{
+		ID: marketID,
+	}
+}
+
+func getTestOrderModel(orderType string) *db.OrderModelMatcher {
+	return &db.OrderModelMatcher{
+		Type:            orderType,
+		MarketID:        marketID,
+		ExchangeOrderID: orderID,
+		Limit:           limit,
+		Quantity:        quantity,
+		Status:          db.OpenOrderStatus,
+	}
+}
+
+func getTestOpenOrder(orderType string) *OpenOrderMatcher {
+	return &OpenOrderMatcher{
+		Type:           orderType,
+		BaseCurrency:   BaseCurrency,
+		MarketCurrency: MarketCurrency,
+		MarketKey:      MarketKey,
+		Limit:          utils.StringToDecimal(limit),
+		Quantity:       utils.StringToDecimal(quantity),
+		Status:         OpenOrderStatus,
+	}
+}
+
+func newMockDependencies(t *testing.T) (*mocks.MockExchange, *mocks.MockOrderStoreInterface, *mocks.MockMarketStoreInterface, *MockOrderMonitor) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockExchange := mocks.NewMockExchange(mockCtrl)
+	mockOrderStore := mocks.NewMockOrderStoreInterface(mockCtrl)
+	mockMarketStore := mocks.NewMockMarketStoreInterface(mockCtrl)
+	mockOrderMonitor := NewMockOrderMonitor(mockCtrl)
+
+	return mockExchange, mockOrderStore, mockMarketStore, mockOrderMonitor
+}
+
+func getTestBalances(currency string, balance string) []*exchanges.Balance {
+	var balances []*exchanges.Balance
+	balances = append(balances, &exchanges.Balance{
+		BaseCurrency: currency,
+		Total:        utils.StringToDecimal(balance),
+		Available:    utils.StringToDecimal(balance),
+	})
+
+	return balances
 }

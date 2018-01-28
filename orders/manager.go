@@ -1,32 +1,33 @@
 package orders
 
 import (
-	"errors"
 	"github.com/payaaam/coin-trader/db"
 	//"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
+	//log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"time"
 )
 
 type Manager struct {
-	Balances    map[string]*Balance
-	OpenOrders  []*OpenOrder
-	client      exchanges.Exchange
-	orderStore  db.OrderStoreInterface
-	marketStore db.MarketStoreInterface
+	Balances       map[string]*Balance
+	monitor        OrderMonitor
+	client         exchanges.Exchange
+	orderStore     db.OrderStoreInterface
+	marketStore    db.MarketStoreInterface
+	monitorChannel chan *OpenOrder
 }
 
-func NewManager(client exchanges.Exchange, os db.OrderStoreInterface, ms db.MarketStoreInterface) OrderManager {
+func NewManager(monitor OrderMonitor, client exchanges.Exchange, os db.OrderStoreInterface, ms db.MarketStoreInterface) OrderManager {
 	manager := &Manager{
-		Balances:    make(map[string]*Balance),
-		OpenOrders:  []*OpenOrder{},
-		client:      client,
-		orderStore:  os,
-		marketStore: ms,
+		Balances:       make(map[string]*Balance),
+		monitor:        monitor,
+		client:         client,
+		orderStore:     os,
+		marketStore:    ms,
+		monitorChannel: make(chan *OpenOrder),
 	}
 	return manager
 }
@@ -39,50 +40,24 @@ func (m *Manager) Setup() error {
 	}
 
 	// Start goroutine for processing open orders if they exist
-	go m.startOpenOrderMonitor()
-	return nil
-}
+	go m.monitor.Start(m.monitorChannel)
 
-func (m *Manager) GetOpenOrders() []*OpenOrder {
-	return m.OpenOrders
+	// Start listening for order updates
+	go m.startOrderListener()
+	return nil
 }
 
 func (m *Manager) GetBalances() map[string]*Balance {
 	return m.Balances
 }
 
-func (m *Manager) startOpenOrderMonitor() {
-	ticker := time.NewTicker(time.Second * 10)
-	for _ = range ticker.C {
-		if len(m.OpenOrders) == 0 {
-			continue
-		}
-
-		m.processOpenOrders()
-	}
-}
-
-func (m *Manager) loadBalances() error {
-	// Get your balances from exchange
-	balances, err := m.client.GetBalances()
-	if err != nil {
-		return err
-	}
-
-	for _, balance := range balances {
-		m.setBalance(balance.BaseCurrency, balance.Total, balance.Available)
-	}
-
-	return nil
-}
-
 func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error {
-	balance := m.getBalance(order.BaseCurrency)
+	balance := m.getBalance(order.BaseCurrency).Available
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
 	}
 
-	err := m.updateBalanceFromOrder(BuyOrder, order)
+	err := m.updateBalanceFromInitialOrder(BuyOrder, order)
 	if err != nil {
 		return err
 	}
@@ -95,52 +70,45 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error 
 }
 
 func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error {
-	balance := m.getBalance(order.MarketCurrency)
+	balance := m.getBalance(order.MarketCurrency).Available
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
 	}
 
-	err := m.updateBalanceFromOrder(SellOrder, order)
+	err := m.updateBalanceFromInitialOrder(SellOrder, order)
 	if err != nil {
 		return err
 	}
 	err = m.createOpenSellOrder(ctx, order)
 	if err != nil {
+		// If Error, process and roll back balance updates
 		return err
 	}
 
 	return nil
 }
 
-func (m *Manager) processOpenOrders() {
-	/*
-		for _, openOrder := range m.OpenOrders {
-			// Get Order Status from bittrex
-			// If order is closed
-			//  - Update Balance
-			//  - Update Database
-			//  - Check for Timeout
-		}
-	*/
-}
-
 func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) error {
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
-	orderID, err := m.client.ExecuteLimitBuy(marketKey, order.Limit, order.Quantity)
+	// Create Open Order and add it to Open Orders
+	openOrder := &OpenOrder{
+		OrderPlacedTimestamp: time.Now().Unix(),
+		Type:                 BuyOrder,
+		Status:               OpenOrderStatus,
+		BaseCurrency:         order.BaseCurrency,
+		MarketCurrency:       order.MarketCurrency,
+		MarketKey:            marketKey,
+		Limit:                order.Limit,
+		Quantity:             order.Quantity,
+	}
+
+	orderID, err := m.monitor.Execute(openOrder)
 	if err != nil {
 		return err
 	}
 
-	// Create Open Order and add it to Open Orders
-	openOrder := &OpenOrder{
-		Type:      BuyOrder,
-		MarketKey: marketKey,
-		ID:        orderID,
-		Limit:     order.Limit,
-		Quantity:  order.Quantity,
-	}
-	m.addOpenOrder(openOrder)
+	openOrder.ID = orderID
 
 	// Save Order to the database
 	orderModel := convertToOrderModel(openOrder)
@@ -160,23 +128,33 @@ func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) err
 
 func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) error {
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
-	orderID, err := m.client.ExecuteLimitSell(marketKey, order.Limit, order.Quantity)
+
+	// Create Open Order
+	openOrder := &OpenOrder{
+		OrderPlacedTimestamp: time.Now().Unix(),
+		Type:                 SellOrder,
+		Status:               OpenOrderStatus,
+		BaseCurrency:         order.BaseCurrency,
+		MarketCurrency:       order.MarketCurrency,
+		MarketKey:            marketKey,
+		Limit:                order.Limit,
+		Quantity:             order.Quantity,
+	}
+
+	orderID, err := m.monitor.Execute(openOrder)
+	if err != nil {
+		return err
+	}
+	openOrder.ID = orderID
+
+	// Save Order to the database
+	orderModel := convertToOrderModel(openOrder)
+	market, err := m.marketStore.GetMarket(ctx, "bittrex", marketKey)
 	if err != nil {
 		return err
 	}
 
-	// Create Open Order and add it to Open Orders
-	openOrder := &OpenOrder{
-		Type:      SellOrder,
-		MarketKey: marketKey,
-		ID:        orderID,
-		Limit:     order.Limit,
-		Quantity:  order.Quantity,
-	}
-	m.addOpenOrder(openOrder)
-
-	// Save Order to the database
-	orderModel := convertToOrderModel(openOrder)
+	orderModel.MarketID = market.ID
 	err = m.orderStore.Save(ctx, orderModel)
 	if err != nil {
 		return err
@@ -185,25 +163,26 @@ func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) er
 	return nil
 }
 
-func (m *Manager) setBalance(marketKey string, total decimal.Decimal, available decimal.Decimal) {
-	m.Balances[utils.Normalize(marketKey)] = &Balance{
-		Total:     total,
-		Available: available,
+func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) error {
+	switch order.Status {
+	case OpenOrderStatus:
+		// Check order placed time
+		// If longer than timeout, cancel order
+		return nil
+	case FilledOrderStatus:
+		return nil
+	case PartiallyFieldOrderStatus:
+		return nil
+	default:
+		return ErrInvalidOrderStatus
 	}
 }
 
-func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decimal) {
-	m.Balances[utils.Normalize(marketKey)].Available = available
-}
-
-func (m *Manager) getBalance(marketKey string) decimal.Decimal {
-	log.Info(marketKey)
-	return m.Balances[utils.Normalize(marketKey)].Available
-}
-
-func (m *Manager) updateBalanceFromOrder(orderType string, order *LimitOrder) error {
-	if orderType == BuyOrder {
-		baseCurrencyBalance := m.getBalance(order.BaseCurrency)
+// Updates the balance for currency after initial order placement
+func (m *Manager) updateBalanceFromInitialOrder(orderType string, order *LimitOrder) error {
+	switch orderType {
+	case BuyOrder:
+		baseCurrencyBalance := m.getBalance(order.BaseCurrency).Available
 		orderCost := order.Limit.Mul(order.Quantity)
 
 		// Debit Base Currency Available
@@ -213,12 +192,9 @@ func (m *Manager) updateBalanceFromOrder(orderType string, order *LimitOrder) er
 			return ErrNotEnoughFunds
 		}
 		m.setAvailableBalance(order.BaseCurrency, newBalance)
-		return nil
-	}
+	case SellOrder:
 
-	if orderType == SellOrder {
-
-		marketCurrencyBalance := m.getBalance(order.MarketCurrency)
+		marketCurrencyBalance := m.getBalance(order.MarketCurrency).Available
 		orderCost := order.Limit.Mul(order.Quantity)
 
 		// Debit Base Currency Available
@@ -228,12 +204,50 @@ func (m *Manager) updateBalanceFromOrder(orderType string, order *LimitOrder) er
 			return ErrNotEnoughFunds
 		}
 		m.setAvailableBalance(order.MarketCurrency, newBalance)
-		return nil
+	default:
+		return ErrInvalidOrderType
 	}
 
-	return errors.New("invalid order type")
+	return nil
 }
 
-func (m *Manager) addOpenOrder(openOrder *OpenOrder) {
-	m.OpenOrders = append(m.OpenOrders, openOrder)
+// Starts listening on the monitorChannel
+func (m *Manager) startOrderListener() {
+	for {
+		updatedOrder := <-m.monitorChannel
+		m.updateBalanceFromOpenOrder(updatedOrder)
+	}
+}
+
+// Fetches balances from Exchnage
+func (m *Manager) loadBalances() error {
+	// Get your balances from exchange
+	balances, err := m.client.GetBalances()
+	if err != nil {
+		return err
+	}
+
+	for _, balance := range balances {
+		m.setBalance(balance.BaseCurrency, balance.Total, balance.Available)
+	}
+
+	return nil
+}
+
+// Sets available and total balance
+func (m *Manager) setBalance(marketKey string, total decimal.Decimal, available decimal.Decimal) {
+	m.Balances[utils.Normalize(marketKey)] = &Balance{
+		Total:     total,
+		Available: available,
+	}
+}
+
+// Sets available balance
+func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decimal) {
+	m.Balances[utils.Normalize(marketKey)].Available = available
+}
+
+// Get Available Balance
+func (m *Manager) getBalance(marketKey string) *Balance {
+	return m.Balances[utils.Normalize(marketKey)]
 }
