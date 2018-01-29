@@ -3,9 +3,6 @@ package orders
 import (
 	"errors"
 	"github.com/golang/mock/gomock"
-	"github.com/payaaam/coin-trader/db"
-	"github.com/payaaam/coin-trader/db/models"
-	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/mocks"
 	"github.com/payaaam/coin-trader/utils"
 	//log "github.com/sirupsen/logrus"
@@ -45,7 +42,7 @@ func TestBuySuccess(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(BuyOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(BuyOrder)
 	marketModel := getTestMarket()
 	orderModelMatcher := getTestOrderModel(BuyOrder)
 
@@ -86,7 +83,7 @@ func TestBuyExecuteError(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(BuyOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(BuyOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -123,7 +120,7 @@ func TestBuyOrderStoreError(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(BuyOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(BuyOrder)
 	marketModel := getTestMarket()
 	orderModelMatcher := getTestOrderModel(BuyOrder)
 
@@ -157,7 +154,7 @@ func TestBuyMarketStoreError(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(BuyOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(BuyOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -216,7 +213,7 @@ func TestSellSuccess(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(SellOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 	marketModel := getTestMarket()
 	orderModelMatcher := getTestOrderModel(SellOrder)
 
@@ -256,7 +253,7 @@ func TestSellExecuteError(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(SellOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 	marketModel := getTestMarket()
 	orderModelMatcher := getTestOrderModel(SellOrder)
 
@@ -297,7 +294,7 @@ func TestSellOrderStoreError(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(SellOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 	marketModel := getTestMarket()
 	orderModelMatcher := getTestOrderModel(SellOrder)
 
@@ -331,7 +328,7 @@ func TestSellMarketStoreError(t *testing.T) {
 
 	balances := getTestBalances("2.0", "2.0", "2.0", "2.0")
 
-	openOrderMatcher := getTestOpenOrder(SellOrder)
+	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -482,62 +479,3 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 }
 
 //func TestOrderUpdate
-
-func getTestMarket() *models.Market {
-	return &models.Market{
-		ID: marketID,
-	}
-}
-
-func getTestOrderModel(orderType string) *db.OrderModelMatcher {
-	return &db.OrderModelMatcher{
-		Type:            orderType,
-		MarketID:        marketID,
-		ExchangeOrderID: orderID,
-		Limit:           limit,
-		Quantity:        quantity,
-		Status:          db.OpenOrderStatus,
-	}
-}
-
-func getTestOpenOrder(orderType string) *OpenOrderMatcher {
-	return &OpenOrderMatcher{
-		Type:           orderType,
-		BaseCurrency:   BaseCurrency,
-		MarketCurrency: MarketCurrency,
-		MarketKey:      MarketKey,
-		Limit:          utils.StringToDecimal(limit),
-		Quantity:       utils.StringToDecimal(quantity),
-		Status:         OpenOrderStatus,
-	}
-}
-
-func newMockDependencies(t *testing.T) *ManagerTestConfig {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	return &ManagerTestConfig{
-		Exchange:           mocks.NewMockExchange(mockCtrl),
-		OrderStore:         mocks.NewMockOrderStoreInterface(mockCtrl),
-		MarketStore:        mocks.NewMockMarketStoreInterface(mockCtrl),
-		OrderMonitor:       NewMockOrderMonitor(mockCtrl),
-		OrderUpdateChannel: make(chan *OpenOrder),
-	}
-}
-
-func getTestBalances(baseAvailable, baseTotal, marketAvailable, marketTotal string) []*exchanges.Balance {
-	var balances []*exchanges.Balance
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: MarketCurrency,
-		Total:        utils.StringToDecimal(marketTotal),
-		Available:    utils.StringToDecimal(marketAvailable),
-	})
-
-	balances = append(balances, &exchanges.Balance{
-		BaseCurrency: BaseCurrency,
-		Total:        utils.StringToDecimal(baseTotal),
-		Available:    utils.StringToDecimal(baseAvailable),
-	})
-
-	return balances
-}

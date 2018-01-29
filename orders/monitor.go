@@ -14,7 +14,7 @@ type Monitor struct {
 	orderUpdates chan *OpenOrder
 }
 
-func NewMonitor(client exchanges.Exchange, orderUpdates chan *OpenOrder, tickerIntervalSeconds int) OrderMonitor {
+func NewMonitor(client exchanges.Exchange, tickerIntervalSeconds int) OrderMonitor {
 	return &Monitor{
 		openOrders: []*OpenOrder{},
 		ticker:     time.NewTicker(time.Second * time.Duration(tickerIntervalSeconds)),
@@ -22,19 +22,12 @@ func NewMonitor(client exchanges.Exchange, orderUpdates chan *OpenOrder, tickerI
 	}
 }
 
-/*
-func NewMonitor(tickerIntervalSeconds int) OrderMonitor {
-	var tickerValue *time.Ticker
-	if tickerIntervalSeconds != 0 {
-		tickerValue = time.NewTicker(time.Second * time.Duration(tickerIntervalSeconds))
-	}
-
+func NewTestMonitor(client exchanges.Exchange) OrderMonitor {
 	return &Monitor{
 		openOrders: []*OpenOrder{},
-		ticker:     tickerValue,
+		client:     client,
 	}
 }
-*/
 
 // Executes a buy or sell order
 func (m *Monitor) Execute(order *OpenOrder) (string, error) {
@@ -51,7 +44,7 @@ func (m *Monitor) Execute(order *OpenOrder) (string, error) {
 
 	// Check buy and sell errors
 	if err != nil {
-		return "", errors.Wrap(ErrExecuteFailure, err.Error())
+		return "", errors.Wrap(err, ErrExecuteFailure.Error())
 	}
 
 	order.ID = orderID
@@ -66,9 +59,12 @@ func (m *Monitor) Start(orderChannel chan *OpenOrder) {
 		return
 	}
 	for _ = range m.ticker.C {
+		log.Info("TEST")
 		if len(m.openOrders) == 0 {
 			continue
 		}
+
+		log.Info("NEVER GONNA GET HERE")
 
 		m.process()
 	}
