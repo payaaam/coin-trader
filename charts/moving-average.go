@@ -23,7 +23,7 @@ func NewMovingAverage(period int) *MovingAverage {
 
 func (m *MovingAverage) Add(high decimal.Decimal, low decimal.Decimal) {
 	if len(m.values) == m.period {
-		m.values = append(m.values[:0], m.values[1:]...)
+		m.values = m.values[1:]
 	}
 
 	// Add value

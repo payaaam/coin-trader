@@ -1,10 +1,11 @@
 package charts
 
 import (
+	"testing"
+
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var Highs = []string{"100", "200", "300", "400"}
