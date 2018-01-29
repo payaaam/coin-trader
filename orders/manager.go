@@ -105,6 +105,7 @@ func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) err
 
 	orderID, err := m.monitor.Execute(openOrder)
 	if err != nil {
+		// Rollback Balance if order execution fails
 		openOrder.CancelOrder()
 		m.updateBalanceFromOpenOrder(openOrder)
 		return err
@@ -138,6 +139,7 @@ func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) er
 
 	orderID, err := m.monitor.Execute(openOrder)
 	if err != nil {
+		// Rollback Balance if order execution fails
 		openOrder.CancelOrder()
 		m.updateBalanceFromOpenOrder(openOrder)
 		return err
@@ -169,7 +171,6 @@ func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) {
 		// Update Market Currency (ALT)
 		marketBalance.Available = marketBalance.Available.Add(order.QuantityFilled)
 		marketBalance.Total = marketBalance.Total.Add(order.QuantityFilled)
-
 	}
 
 	if order.Type == SellOrder {
