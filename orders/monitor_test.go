@@ -115,6 +115,9 @@ func TestOrderUpdateFilled(t *testing.T) {
 	assert.Equal(t, exchangeOrder.TradePrice, receivedOrder.TradePrice)
 	assert.Equal(t, exchangeOrder.QuantityFilled, receivedOrder.QuantityFilled)
 	assert.Equal(t, orderID, receivedOrder.ID)
+
+	monitor.process()
+	assert.Equal(t, 0, len(monitor.GetOrders()))
 }
 
 func TestOrderUpdatePartiallyFilled(t *testing.T) {
@@ -142,9 +145,14 @@ func TestOrderUpdatePartiallyFilled(t *testing.T) {
 	assert.Equal(t, exchangeOrder.TradePrice, receivedOrder.TradePrice)
 	assert.Equal(t, exchangeOrder.QuantityFilled, receivedOrder.QuantityFilled)
 	assert.Equal(t, orderID, receivedOrder.ID)
+
+	// Ensure item is removed from array
+	monitor.process()
+	assert.Equal(t, 0, len(monitor.GetOrders()))
+
 }
 
-func TestOrderTimeout(t *testing.T) {
+func TestOrderTimeoutSuccess(t *testing.T) {
 	mockConfig := newMockDependencies(t)
 	exchange := mockConfig.Exchange
 	orderUpdateChannel := mockConfig.OrderUpdateChannel
@@ -171,4 +179,8 @@ func TestOrderTimeout(t *testing.T) {
 
 	assert.Equal(t, FilledOrderStatus, receivedOrder.Status)
 	assert.Equal(t, closedTimestamp, receivedOrder.CloseTimestamp)
+
+	// Ensure order is removed from array
+	monitor.process()
+	assert.Equal(t, 0, len(monitor.GetOrders()))
 }

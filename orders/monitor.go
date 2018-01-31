@@ -59,20 +59,23 @@ func (m *Monitor) Start(orderChannel chan *OpenOrder) {
 		return
 	}
 	for _ = range m.ticker.C {
-		log.Info("TEST")
 		if len(m.openOrders) == 0 {
 			continue
 		}
-
-		log.Info("NEVER GONNA GET HERE")
-
 		m.process()
 	}
 }
 
 func (m *Monitor) process() {
+	var newOpenOrders []*OpenOrder
 	for index, _ := range m.openOrders {
 		order := m.openOrders[index]
+		// Remove any items that have been filled
+		if order.Status == FilledOrderStatus {
+			continue
+		}
+		newOpenOrders = append(newOpenOrders, order)
+
 		// Fetch Latest Order Information
 		exchangeOrder, err := m.client.GetOrder(order.ID)
 		if err != nil {
@@ -98,6 +101,8 @@ func (m *Monitor) process() {
 		// Send updated order to channel for Manager
 		m.orderUpdates <- order
 	}
+
+	m.openOrders = newOpenOrders
 }
 
 func (m *Monitor) GetOrders() []*OpenOrder {
