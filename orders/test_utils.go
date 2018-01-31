@@ -82,3 +82,31 @@ func getTestOpenOrder(orderType string) *OpenOrder {
 		Quantity:       utils.StringToDecimal(quantity),
 	}
 }
+
+func getTestFilledExchangeOrder() *exchanges.Order {
+	return &exchanges.Order{
+		CloseTimestamp: closedTimestamp,
+		TradePrice:     utils.StringToDecimal(tradePrice),
+		QuantityFilled: utils.StringToDecimal(quantity),
+	}
+}
+
+func getTestPartiallyFilledExchangeOrder() *exchanges.Order {
+	return &exchanges.Order{
+		CloseTimestamp: closedTimestamp,
+		TradePrice:     utils.StringToDecimal(tradePrice),
+		QuantityFilled: utils.StringToDecimal(partiallyFilledQuantity),
+	}
+}
+
+func getTestUnfilledExchangeOrder() *exchanges.Order {
+	return &exchanges.Order{}
+}
+
+func getTestUnfilledClosedExchangeOrder() *exchanges.Order {
+	return &exchanges.Order{
+		CloseTimestamp: closedTimestamp,
+		TradePrice:     utils.StringToDecimal(tradePrice),
+		QuantityFilled: utils.ZeroDecimal(),
+	}
+}

@@ -66,7 +66,7 @@ type OpenOrder struct {
 }
 
 func (o *OpenOrder) hasReachedTimeout() bool {
-	timeDiff := o.CloseTimestamp - o.OpenTimestamp
+	timeDiff := time.Now().Unix() - o.OpenTimestamp
 	if timeDiff >= OrderOpenTimeoutMS {
 		return true
 	}

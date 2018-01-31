@@ -8,12 +8,16 @@ import (
 	//"time"
 )
 
+var closedTimestamp = int64(1234567)
+var tradePrice = "2.1"
+var partiallyFilledQuantity = "8.5"
+
 func TestExecuteBuy(t *testing.T) {
 	mockConfig := newMockDependencies(t)
 	exchange := mockConfig.Exchange
 	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
-	monitor := NewTestMonitor(mockConfig.Exchange)
+	monitor := NewTestMonitor(exchange)
 	monitor.Start(orderUpdateChannel)
 	exchange.EXPECT().ExecuteLimitBuy(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return(orderID, nil)
 
@@ -37,7 +41,7 @@ func TestExecuteBuyError(t *testing.T) {
 	exchange := mockConfig.Exchange
 	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
-	monitor := NewTestMonitor(mockConfig.Exchange)
+	monitor := NewTestMonitor(exchange)
 	monitor.Start(orderUpdateChannel)
 	exchange.EXPECT().ExecuteLimitBuy(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return("", someError)
 
@@ -52,7 +56,7 @@ func TestExecuteSell(t *testing.T) {
 	exchange := mockConfig.Exchange
 	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
-	monitor := NewTestMonitor(mockConfig.Exchange)
+	monitor := NewTestMonitor(exchange)
 	monitor.Start(orderUpdateChannel)
 	exchange.EXPECT().ExecuteLimitSell(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return(orderID, nil)
 
@@ -76,7 +80,7 @@ func TestExecuteSellError(t *testing.T) {
 	exchange := mockConfig.Exchange
 	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
-	monitor := NewTestMonitor(mockConfig.Exchange)
+	monitor := NewTestMonitor(exchange)
 	monitor.Start(orderUpdateChannel)
 	exchange.EXPECT().ExecuteLimitSell(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return("", someError)
 
@@ -87,13 +91,84 @@ func TestExecuteSellError(t *testing.T) {
 }
 
 func TestOrderUpdateFilled(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	exchange := mockConfig.Exchange
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
+	monitor := NewTestMonitor(exchange)
+	monitor.Start(orderUpdateChannel)
+	exchange.EXPECT().ExecuteLimitBuy(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return(orderID, nil)
+
+	exchangeOrder := getTestFilledExchangeOrder()
+	exchange.EXPECT().GetOrder(orderID).Return(exchangeOrder, nil)
+	openOrder := getTestOpenOrder(BuyOrder)
+
+	receivedOrderID, err := monitor.Execute(openOrder)
+	assert.Nil(t, err, "should not error")
+	assert.Equal(t, orderID, receivedOrderID, "should receive orderID from exchange")
+
+	go monitor.process()
+	receivedOrder := <-orderUpdateChannel
+
+	assert.Equal(t, FilledOrderStatus, receivedOrder.Status)
+	assert.Equal(t, exchangeOrder.CloseTimestamp, receivedOrder.CloseTimestamp)
+	assert.Equal(t, exchangeOrder.TradePrice, receivedOrder.TradePrice)
+	assert.Equal(t, exchangeOrder.QuantityFilled, receivedOrder.QuantityFilled)
+	assert.Equal(t, orderID, receivedOrder.ID)
 }
 
 func TestOrderUpdatePartiallyFilled(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	exchange := mockConfig.Exchange
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
+	monitor := NewTestMonitor(exchange)
+	monitor.Start(orderUpdateChannel)
+	exchange.EXPECT().ExecuteLimitBuy(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return(orderID, nil)
+
+	exchangeOrder := getTestPartiallyFilledExchangeOrder()
+	exchange.EXPECT().GetOrder(orderID).Return(exchangeOrder, nil)
+	openOrder := getTestOpenOrder(BuyOrder)
+
+	receivedOrderID, err := monitor.Execute(openOrder)
+	assert.Nil(t, err, "should not error")
+	assert.Equal(t, orderID, receivedOrderID, "should receive orderID from exchange")
+
+	go monitor.process()
+	receivedOrder := <-orderUpdateChannel
+
+	assert.Equal(t, FilledOrderStatus, receivedOrder.Status)
+	assert.Equal(t, exchangeOrder.CloseTimestamp, receivedOrder.CloseTimestamp)
+	assert.Equal(t, exchangeOrder.TradePrice, receivedOrder.TradePrice)
+	assert.Equal(t, exchangeOrder.QuantityFilled, receivedOrder.QuantityFilled)
+	assert.Equal(t, orderID, receivedOrder.ID)
 }
 
 func TestOrderTimeout(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	exchange := mockConfig.Exchange
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
 
+	monitor := NewTestMonitor(exchange)
+	monitor.Start(orderUpdateChannel)
+	exchange.EXPECT().ExecuteLimitBuy(MarketKey, utils.StringToDecimal(limit), utils.StringToDecimal(quantity)).Return(orderID, nil)
+
+	exchangeOrder := getTestUnfilledExchangeOrder()
+	exchangeOrderClosed := getTestUnfilledClosedExchangeOrder()
+	exchange.EXPECT().GetOrder(orderID).Return(exchangeOrder, nil)
+	exchange.EXPECT().CancelOrder(orderID).Return(nil)
+	exchange.EXPECT().GetOrder(orderID).Return(exchangeOrderClosed, nil)
+
+	openOrder := getTestOpenOrder(BuyOrder)
+	openOrder.OpenTimestamp = openOrder.OpenTimestamp - OrderOpenTimeoutMS
+
+	receivedOrderID, err := monitor.Execute(openOrder)
+	assert.Nil(t, err, "should not error")
+	assert.Equal(t, orderID, receivedOrderID, "should receive orderID from exchange")
+
+	go monitor.process()
+	receivedOrder := <-orderUpdateChannel
+
+	assert.Equal(t, FilledOrderStatus, receivedOrder.Status)
+	assert.Equal(t, closedTimestamp, receivedOrder.CloseTimestamp)
 }

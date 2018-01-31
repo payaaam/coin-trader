@@ -83,8 +83,11 @@ func (m *Monitor) process() {
 		// Update fields in order
 		updateOrder(order, exchangeOrder)
 
+		log.Info("HERE")
+
 		// Determine if the order has timed out
 		if order.hasReachedTimeout() && order.Status == OpenOrderStatus {
+			log.Info("HERE TOO")
 			err := m.cancelOrder(order)
 			if err != nil {
 				log.Error(err)
