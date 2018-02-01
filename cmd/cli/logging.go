@@ -16,9 +16,17 @@ func initLogging(level logrus.Level, useJson bool) {
 	}
 }
 
+func logEvent(event string, interval string) {
+	logrus.WithFields(logrus.Fields{
+		"type":     event,
+		"interval": interval,
+		"exchange": "bittrex",
+	}).Info()
+}
+
 func logInfo(marketKey string, interval string, message string) {
 	logrus.WithFields(logrus.Fields{
-		"component":   "ticker",
+		"type":        "ticker",
 		"tradingPair": marketKey,
 		"interval":    interval,
 		"exchange":    "bittrex",
@@ -27,7 +35,7 @@ func logInfo(marketKey string, interval string, message string) {
 
 func logError(marketKey string, interval string, err error) {
 	logrus.WithFields(logrus.Fields{
-		"component":   "ticker",
+		"type":        "ticker",
 		"tradingPair": marketKey,
 		"interval":    interval,
 	}).Error(err)
@@ -35,6 +43,6 @@ func logError(marketKey string, interval string, err error) {
 
 func logFatal(err error) {
 	logrus.WithFields(logrus.Fields{
-		"component": "ticker",
+		"type": "ticker",
 	}).Fatal(err)
 }

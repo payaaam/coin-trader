@@ -5,7 +5,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	//"time"
 )
 
 var closedTimestamp = int64(1234567)

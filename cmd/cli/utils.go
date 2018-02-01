@@ -177,3 +177,12 @@ func getPreviousPeriodRange(interval string) (int64, int64) {
 func intervalMilliseconds(interval string) int64 {
 	return int64(charts.IntervalMilliseconds[interval])
 }
+
+func contains(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}

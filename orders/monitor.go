@@ -12,6 +12,7 @@ type Monitor struct {
 	ticker       *time.Ticker
 	client       exchanges.Exchange
 	orderUpdates chan *OpenOrder
+	// TODO ADD error channel
 }
 
 func NewMonitor(client exchanges.Exchange, tickerIntervalSeconds int) OrderMonitor {
