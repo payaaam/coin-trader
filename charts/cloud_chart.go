@@ -5,9 +5,10 @@ import (
 	//"fmt"
 	//"github.com/fatih/color"
 	//"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type CloudChart struct {
@@ -18,6 +19,7 @@ type CloudChart struct {
 	KijunMovingAverage   *MovingAverage
 	TenkanMovingAverage  *MovingAverage
 	SenkouBMovingAverage *MovingAverage
+	SMA200               *SMA
 	Cloud                map[int64]*CloudPoint
 	Test                 bool
 }
@@ -36,6 +38,7 @@ func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange st
 		KijunMovingAverage:   NewMovingAverage(KijunPeriod),
 		TenkanMovingAverage:  NewMovingAverage(TenkanPeriod),
 		SenkouBMovingAverage: NewMovingAverage(SenkouBPeriod),
+		SMA200:               NewSMA(200, false),
 		Cloud:                make(map[int64]*CloudPoint),
 		Test:                 false,
 	}
@@ -45,10 +48,12 @@ func NewCloudChartFromCandles(candles []*Candle, tradingPair string, exchange st
 		chart.KijunMovingAverage.Add(candle.High, candle.Low)
 		chart.TenkanMovingAverage.Add(candle.High, candle.Low)
 		chart.SenkouBMovingAverage.Add(candle.High, candle.Low)
+		chart.SMA200.Add(candle.Close)
 
 		// Set Cloud
 		candle.Kijun = chart.KijunMovingAverage.Avg()
 		candle.Tenkan = chart.TenkanMovingAverage.Avg()
+		candle.SMA200 = chart.SMA200.Avg()
 		senkouB := chart.SenkouBMovingAverage.Avg()
 		cloud := NewCloudPoint(candle.Tenkan, candle.Kijun, senkouB)
 		chart.SetCloudPoint(candle.TimeStamp, cloud)
@@ -66,6 +71,7 @@ func NewCloudChart(tradingPair string, exchange string, interval string) *CloudC
 		KijunMovingAverage:   NewMovingAverage(KijunPeriod),
 		TenkanMovingAverage:  NewMovingAverage(TenkanPeriod),
 		SenkouBMovingAverage: NewMovingAverage(SenkouBPeriod),
+		SMA200:               NewSMA(200, false),
 		Cloud:                make(map[int64]*CloudPoint),
 		Test:                 false,
 	}
@@ -82,6 +88,7 @@ func (c *CloudChart) AddCandle(candle *Candle) {
 		c.KijunMovingAverage.RemoveLast()
 		c.TenkanMovingAverage.RemoveLast()
 		c.SenkouBMovingAverage.RemoveLast()
+		c.SMA200.RemoveLast()
 		c.candles = c.candles[:len(c.candles)-1]
 	}
 
@@ -89,10 +96,12 @@ func (c *CloudChart) AddCandle(candle *Candle) {
 	c.KijunMovingAverage.Add(candle.High, candle.Low)
 	c.TenkanMovingAverage.Add(candle.High, candle.Low)
 	c.SenkouBMovingAverage.Add(candle.High, candle.Low)
+	c.SMA200.Add(candle.Close)
 
 	// Set Cloud
 	candle.Kijun = c.KijunMovingAverage.Avg()
 	candle.Tenkan = c.TenkanMovingAverage.Avg()
+	candle.SMA200 = c.SMA200.Avg()
 	senkouB := c.SenkouBMovingAverage.Avg()
 	cloud := NewCloudPoint(candle.Tenkan, candle.Kijun, senkouB)
 	c.SetCloudPoint(candle.TimeStamp, cloud)
@@ -124,6 +133,7 @@ func (c *CloudChart) Print() {
 		log.Infof("Close: %v", candle.Close)
 		log.Infof("Tenkan: %v", candle.Tenkan)
 		log.Infof("Kijun: %v", candle.Kijun)
+		log.Infof("200 SMA: %v", candle.SMA200)
 		cloud, err := c.GetCloud(candle.TimeStamp)
 		if err == nil {
 			log.Infof("SenkouA: %v", cloud.SenkouA)

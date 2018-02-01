@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/fatih/color"
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
@@ -12,7 +14,6 @@ import (
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type BackTestCommand struct {
@@ -35,7 +36,7 @@ func NewBackTestCommand(config *Config, marketStore db.MarketStoreInterface, cha
 
 // UPDATE HERE when testing a new strategy
 func GetStrategy() strategies.Strategy {
-	return strategies.NewCloudStrategy()
+	return strategies.NewTKCross200SMAStrategy()
 }
 
 func (b *BackTestCommand) Run(exchange string, interval string, marketKey string) {
