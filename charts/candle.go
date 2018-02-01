@@ -2,6 +2,7 @@ package charts
 
 import (
 	"fmt"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -14,6 +15,7 @@ type Candle struct {
 	Volume    decimal.Decimal
 	Kijun     decimal.Decimal
 	Tenkan    decimal.Decimal
+	SMA200    decimal.Decimal
 }
 
 func (c *Candle) Print() {
@@ -26,4 +28,5 @@ func (c *Candle) Print() {
 	fmt.Printf("Volume: %v\n", c.Volume)
 	fmt.Printf("Tenkan: %v\n", c.Tenkan)
 	fmt.Printf("Kijun: %v\n", c.Kijun)
+	fmt.Printf("200 SMA: %v\n", c.SMA200)
 }
