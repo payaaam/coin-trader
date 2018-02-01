@@ -23,8 +23,7 @@ func NewSMA(period int, exponential bool) *SMA {
 
 func (m *SMA) Add(close decimal.Decimal) {
 	if len(m.values) == m.period {
-		// m.values = append(m.values[:0], m.values[1:]...)
-		m.values = m.values[1:]
+		m.values = append(m.values[:0], m.values[1:]...)
 	}
 
 	// Add value
