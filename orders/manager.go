@@ -81,7 +81,6 @@ func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
 	}
 	err = m.createOpenSellOrder(ctx, order)
 	if err != nil {
-		// If Error, process and roll back balance updates
 		return err
 	}
 
