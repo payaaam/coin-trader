@@ -73,42 +73,42 @@ func main() {
 				return nil
 			},
 		},
-		/*
-			{
-				Name:  "trader",
-				Usage: "makes you money $$$$",
-				Flags: []cli.Flag{exchangeFlag, intervalFlag},
-				Action: func(c *cli.Context) error {
-					config := NewConfig()
-					initLogging(config.LogLevel, true)
 
-					if exchanges.ValidExchanges[exchange] != true {
-						logFatal(fmt.Errorf("%s not a valid exchange", exchange))
-					}
+		{
+			Name:  "trader",
+			Usage: "makes you money $$$$",
+			Flags: []cli.Flag{exchangeFlag, intervalFlag},
+			Action: func(c *cli.Context) error {
+				config := NewConfig()
+				initLogging(config.LogLevel, true)
 
-					if charts.ValidIntervals[interval] != true {
-						logFatal(fmt.Errorf("%s not a valid interval", interval))
-					}
+				if exchanges.ValidExchanges[exchange] != true {
+					logFatal(fmt.Errorf("%s not a valid exchange", exchange))
+				}
 
-					exchangeClient, err := getExchangeClient(config, exchange)
-					if err != nil {
-						log.Fatal(err)
-					}
+				if charts.ValidIntervals[interval] != true {
+					logFatal(fmt.Errorf("%s not a valid interval", interval))
+				}
 
-					postgres, err := sql.Open("postgres", config.PostgresConn)
-					if err != nil {
-						panic(err)
-					}
+				exchangeClient, err := getExchangeClient(config, exchange)
+				if err != nil {
+					log.Fatal(err)
+				}
 
-					marketStore := db.NewMarketStore(postgres)
-					chartStore := db.NewChartStore(postgres)
-					tickStore := db.NewTickStore(postgres)
+				postgres, err := sql.Open("postgres", config.PostgresConn)
+				if err != nil {
+					panic(err)
+				}
 
-					traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient)
-					traderCommand.Run(exchange, interval)
-					return nil
-				},
-			},*/
+				marketStore := db.NewMarketStore(postgres)
+				chartStore := db.NewChartStore(postgres)
+				tickStore := db.NewTickStore(postgres)
+
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient)
+				traderCommand.Run(exchange, interval)
+				return nil
+			},
+		},
 		{
 			Name:  "backtest",
 			Usage: "test a strat on all the data",
