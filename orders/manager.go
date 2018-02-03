@@ -150,9 +150,7 @@ func (m *Manager) simulateOpenBuyOrder(ctx context.Context, order *LimitOrder) e
 		TradePrice:     order.Limit,
 	}
 
-	m.processOrderUpdate(openOrder)
-
-	return nil
+	return m.processOrderUpdate(openOrder)
 }
 
 // Creates and executes an open sell order
@@ -210,9 +208,7 @@ func (m *Manager) simulateOpenSellOrder(ctx context.Context, order *LimitOrder) 
 	}
 
 	// Save Order to the database
-	m.processOrderUpdate(openOrder)
-
-	return nil
+	return m.processOrderUpdate(openOrder)
 }
 
 // This function updates the internal balance from a limit order

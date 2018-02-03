@@ -108,11 +108,14 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 							MarketCurrency: market.MarketCurrency,
 							BaseCurrency:   market.BaseCurrency,
 						}
-						t.orderManager.ExecuteLimitBuy(ctx, newSellOrder)
 
 						log.Infof("Executed Sell: %s to %s", market.MarketCurrency, market.BaseCurrency)
 						log.Infof("Quantity: %v", altBalance)
 						log.Infof("Price: %v", limit)
+						err = t.orderManager.ExecuteLimitBuy(ctx, newSellOrder)
+						if err != nil {
+							logError(market.MarketKey, interval, err)
+						}
 					}
 					continue
 				}
@@ -137,11 +140,14 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 							MarketCurrency: market.MarketCurrency,
 							BaseCurrency:   market.BaseCurrency,
 						}
-						t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
-
 						log.Infof("Executed Buy: %s to %s", market.BaseCurrency, market.MarketCurrency)
 						log.Infof("Quantity: %v", quantity)
 						log.Infof("Price: %v", limit)
+						err = t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
+						if err != nil {
+							logError(market.MarketKey, interval, err)
+						}
+
 					}
 				}
 				continue
