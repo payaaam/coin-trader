@@ -2,6 +2,7 @@ package orders
 
 import (
 	"github.com/payaaam/coin-trader/db"
+	"github.com/satori/go.uuid"
 	//"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
@@ -18,6 +19,7 @@ type Manager struct {
 	orderStore   db.OrderStoreInterface
 	marketStore  db.MarketStoreInterface
 	orderUpdates chan *OpenOrder
+	isSimulation bool
 }
 
 func NewManager(monitor OrderMonitor, orderUpdates chan *OpenOrder, client exchanges.Exchange, os db.OrderStoreInterface, ms db.MarketStoreInterface) OrderManager {
@@ -28,6 +30,7 @@ func NewManager(monitor OrderMonitor, orderUpdates chan *OpenOrder, client excha
 		orderStore:   os,
 		marketStore:  ms,
 		orderUpdates: orderUpdates,
+		isSimulation: false,
 	}
 	return manager
 }
@@ -47,6 +50,12 @@ func (m *Manager) Setup() error {
 	return nil
 }
 
+func (m *Manager) SetupSimulation(btcBalance *Balance) error {
+	m.isSimulation = true
+	m.setBalance("btc", btcBalance.Total, btcBalance.Available)
+	return nil
+}
+
 func (m *Manager) GetBalances() map[string]*Balance {
 	return m.Balances
 }
@@ -61,12 +70,12 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error 
 	if err != nil {
 		return err
 	}
-	err = m.createOpenBuyOrder(ctx, order)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	// Do not execute trade if this is simulation
+	if m.isSimulation == true {
+		return m.simulateOpenBuyOrder(ctx, order)
+	}
+	return m.createOpenBuyOrder(ctx, order)
 }
 
 func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error {
@@ -79,14 +88,15 @@ func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
 	if err != nil {
 		return err
 	}
-	err = m.createOpenSellOrder(ctx, order)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	// Do not execute trade if this is simulation
+	if m.isSimulation == true {
+		return m.simulateOpenSellOrder(ctx, order)
+	}
+	return m.createOpenSellOrder(ctx, order)
 }
 
+// Creates and executes open buy order
 func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) error {
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
@@ -121,6 +131,31 @@ func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) err
 	return nil
 }
 
+// Simulates executing an open buy order. This will close it immediately
+func (m *Manager) simulateOpenBuyOrder(ctx context.Context, order *LimitOrder) error {
+	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
+
+	openOrder := &OpenOrder{
+		ID:             uuid.NewV4().String(),
+		OpenTimestamp:  time.Now().Unix(),
+		CloseTimestamp: time.Now().Unix() + 1,
+		Type:           BuyOrder,
+		Status:         FilledOrderStatus,
+		BaseCurrency:   order.BaseCurrency,
+		MarketCurrency: order.MarketCurrency,
+		MarketKey:      marketKey,
+		Limit:          order.Limit,
+		Quantity:       order.Quantity,
+		QuantityFilled: order.Quantity,
+		TradePrice:     order.Limit,
+	}
+
+	m.processOrderUpdate(openOrder)
+
+	return nil
+}
+
+// Creates and executes an open sell order
 func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) error {
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
@@ -150,6 +185,32 @@ func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) er
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Simulates creating an open sell order. This will close it immediately
+func (m *Manager) simulateOpenSellOrder(ctx context.Context, order *LimitOrder) error {
+	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
+
+	// Create Open Order
+	openOrder := &OpenOrder{
+		ID:             uuid.NewV4().String(),
+		OpenTimestamp:  time.Now().Unix(),
+		CloseTimestamp: time.Now().Unix() + 1,
+		Type:           SellOrder,
+		Status:         FilledOrderStatus,
+		BaseCurrency:   order.BaseCurrency,
+		MarketCurrency: order.MarketCurrency,
+		MarketKey:      marketKey,
+		Limit:          order.Limit,
+		Quantity:       order.Quantity,
+		QuantityFilled: order.Quantity,
+		TradePrice:     order.Limit,
+	}
+
+	// Save Order to the database
+	m.processOrderUpdate(openOrder)
 
 	return nil
 }
@@ -184,6 +245,7 @@ func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) {
 	}
 }
 
+// Receives updated open order and updates balances accordingly
 func (m *Manager) processOrderUpdate(order *OpenOrder) error {
 	switch order.Status {
 	case OpenOrderStatus:
@@ -281,6 +343,7 @@ func (m *Manager) getBalance(marketKey string) *Balance {
 	return m.Balances[utils.Normalize(marketKey)]
 }
 
+// Save an Order to the database
 func (m *Manager) saveOpenOrder(ctx context.Context, openOrder *OpenOrder) error {
 	// Save Order to the database
 	orderModel := convertToOrderModel(openOrder)
