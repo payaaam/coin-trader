@@ -187,6 +187,7 @@ func (t *TickerCommand) generateDailyCandles(ctx context.Context, exchange strin
 	}
 
 	for _, m := range markets {
+		logInfo(m.MarketKey, newCandleInterval, "Generating Daily Candle")
 		chart, err := loadChart(ctx, t.chartStore, m.ID, baseInterval)
 		if err != nil {
 			logError(m.MarketKey, newCandleInterval, err)
@@ -201,7 +202,9 @@ func (t *TickerCommand) generateDailyCandles(ctx context.Context, exchange strin
 		}
 
 		if len(candles) == 0 {
-			log.Warn("Candles do not exist in this timeframe.")
+			log.WithFields(log.Fields{
+				"tradingPair": m.MarketKey,
+			}).Warn("Candles do not exist in this timeframe.")
 			continue
 		}
 

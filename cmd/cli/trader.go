@@ -53,6 +53,8 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 			Total:     utils.StringToDecimal("1.0"),
 			Available: utils.StringToDecimal("1.0"),
 		})
+
+		log.Info("Simulation Mode")
 	} else {
 		log.Fatal("Must run a simulation")
 		//t.orderManager.Setup()

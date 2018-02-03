@@ -159,8 +159,6 @@ func getPreviousPeriodRange(interval string) (int64, int64) {
 		start := time.Date(ts.Year(), ts.Month(), ts.Day()-1, 0, 0, 0, 0, time.UTC)
 		end := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
 
-		log.Info()
-
 		return start.Unix(), end.Unix()
 	}
 
