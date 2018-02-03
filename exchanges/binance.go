@@ -52,3 +52,7 @@ func (b *BinanceClient) GetOrder(orderID string) (*Order, error) {
 func (b *BinanceClient) CancelOrder(orderID string) error {
 	return nil
 }
+
+func (b *BinanceClient) GetTicker(tradingPair string) (*Ticker, error) {
+	return nil, nil
+}

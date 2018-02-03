@@ -149,3 +149,16 @@ func (m *MockExchange) CancelOrder(orderID string) error {
 func (mr *MockExchangeMockRecorder) CancelOrder(orderID interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelOrder", reflect.TypeOf((*MockExchange)(nil).CancelOrder), orderID)
 }
+
+// GetTicker mocks base method
+func (m *MockExchange) GetTicker(tradingPair string) (*Ticker, error) {
+	ret := m.ctrl.Call(m, "GetTicker", tradingPair)
+	ret0, _ := ret[0].(*Ticker)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTicker indicates an expected call of GetTicker
+func (mr *MockExchangeMockRecorder) GetTicker(tradingPair interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTicker", reflect.TypeOf((*MockExchange)(nil).GetTicker), tradingPair)
+}

@@ -21,7 +21,7 @@ var limit = "0.05"
 var quantity = "10"
 var orderID = "some-order-id"
 var ctx = context.Background()
-var marketID = 1
+var MarketID = 1
 
 type ManagerTestConfig struct {
 	Exchange           *mocks.MockExchange

@@ -61,7 +61,7 @@ func (m *Manager) GetBalances() map[string]*Balance {
 }
 
 func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error {
-	balance := m.getBalance(order.BaseCurrency).Available
+	balance := m.GetBalance(order.BaseCurrency).Available
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
 	}
@@ -79,7 +79,7 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error 
 }
 
 func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error {
-	balance := m.getBalance(order.MarketCurrency).Available
+	balance := m.GetBalance(order.MarketCurrency).Available
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
 	}
@@ -217,8 +217,8 @@ func (m *Manager) simulateOpenSellOrder(ctx context.Context, order *LimitOrder) 
 
 // This function updates the internal balance from a limit order
 func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) {
-	baseBalance := m.getBalance(order.BaseCurrency)
-	marketBalance := m.getBalance(order.MarketCurrency)
+	baseBalance := m.GetBalance(order.BaseCurrency)
+	marketBalance := m.GetBalance(order.MarketCurrency)
 	originalCost := order.Limit.Mul(order.Quantity)
 	actualCost := order.TradePrice.Mul(order.QuantityFilled)
 
@@ -272,7 +272,7 @@ func (m *Manager) processOrderUpdate(order *OpenOrder) error {
 // Updates the balance for currency after initial order placement
 func (m *Manager) updateBalanceFromLimitOrder(orderType string, order *LimitOrder) error {
 	if orderType == BuyOrder {
-		baseCurrencyBalance := m.getBalance(order.BaseCurrency).Available
+		baseCurrencyBalance := m.GetBalance(order.BaseCurrency).Available
 		orderCost := order.Limit.Mul(order.Quantity)
 
 		// Debit Base Currency Available
@@ -285,7 +285,7 @@ func (m *Manager) updateBalanceFromLimitOrder(orderType string, order *LimitOrde
 	}
 
 	if orderType == SellOrder {
-		marketCurrencyBalance := m.getBalance(order.MarketCurrency).Available
+		marketCurrencyBalance := m.GetBalance(order.MarketCurrency).Available
 		orderCost := order.Limit.Mul(order.Quantity)
 
 		// Debit Base Currency Available
@@ -339,7 +339,7 @@ func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decima
 }
 
 // Get Available Balance
-func (m *Manager) getBalance(marketKey string) *Balance {
+func (m *Manager) GetBalance(marketKey string) *Balance {
 	return m.Balances[utils.Normalize(marketKey)]
 }
 

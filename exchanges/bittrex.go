@@ -29,6 +29,19 @@ func NewBittrexClient(client *bittrex.Bittrex) Exchange {
 	}
 }
 
+func (b *BittrexClient) GetTicker(tradingPair string) (*Ticker, error) {
+	ticker, err := b.client.GetTicker(tradingPair)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Ticker{
+		Bid:  ticker.Bid,
+		Ask:  ticker.Ask,
+		Last: ticker.Last,
+	}, nil
+}
+
 func (b *BittrexClient) GetCandles(tradingPair string, chartInterval string) ([]*charts.Candle, error) {
 	candles, err := b.client.GetTicks(tradingPair, chartInterval)
 	if err != nil {

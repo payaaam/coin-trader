@@ -45,6 +45,30 @@ func (mr *MockOrderManagerMockRecorder) Setup() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Setup", reflect.TypeOf((*MockOrderManager)(nil).Setup))
 }
 
+// SetupSimulation mocks base method
+func (m *MockOrderManager) SetupSimulation(arg0 *Balance) error {
+	ret := m.ctrl.Call(m, "SetupSimulation", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetupSimulation indicates an expected call of SetupSimulation
+func (mr *MockOrderManagerMockRecorder) SetupSimulation(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupSimulation", reflect.TypeOf((*MockOrderManager)(nil).SetupSimulation), arg0)
+}
+
+// GetBalance mocks base method
+func (m *MockOrderManager) GetBalance(marketKey string) *Balance {
+	ret := m.ctrl.Call(m, "GetBalance", marketKey)
+	ret0, _ := ret[0].(*Balance)
+	return ret0
+}
+
+// GetBalance indicates an expected call of GetBalance
+func (mr *MockOrderManagerMockRecorder) GetBalance(marketKey interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockOrderManager)(nil).GetBalance), marketKey)
+}
+
 // GetBalances mocks base method
 func (m *MockOrderManager) GetBalances() map[string]*Balance {
 	ret := m.ctrl.Call(m, "GetBalances")

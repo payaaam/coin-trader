@@ -17,6 +17,7 @@ type Exchange interface {
 	GetBalances() ([]*Balance, error)
 	GetOrder(orderID string) (*Order, error)
 	CancelOrder(orderID string) error
+	GetTicker(tradingPair string) (*Ticker, error)
 }
 
 type Market struct {
@@ -27,7 +28,11 @@ type Market struct {
 	MarketCurrency     string
 	MarketCurrencyName string
 }
-
+type Ticker struct {
+	Bid  decimal.Decimal
+	Ask  decimal.Decimal
+	Last decimal.Decimal
+}
 type Balance struct {
 	BaseCurrency string
 	Total        decimal.Decimal

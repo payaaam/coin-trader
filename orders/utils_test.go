@@ -13,14 +13,14 @@ import (
 
 func getTestMarket() *models.Market {
 	return &models.Market{
-		ID: marketID,
+		ID: MarketID,
 	}
 }
 
 func getTestOrderModel(orderType string) *db.OrderModelMatcher {
 	return &db.OrderModelMatcher{
 		Type:            orderType,
-		MarketID:        marketID,
+		MarketID:        MarketID,
 		ExchangeOrderID: orderID,
 		Limit:           limit,
 		Quantity:        quantity,
