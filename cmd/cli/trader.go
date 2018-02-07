@@ -93,8 +93,6 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 					if ichimokuCloudStrategy.ShouldSell(chart) == true {
 
 						log.Infof("Executed Sell: %s to %s", market.MarketCurrency, market.BaseCurrency)
-						return
-
 						ticker, err := t.getLatestPrice(ctx, market.MarketKey)
 						if err != nil {
 							log.Error(err)
@@ -124,7 +122,6 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 					if ichimokuCloudStrategy.ShouldBuy(chart) == true {
 
 						log.Infof("Executed Buy: %s to %s", market.BaseCurrency, market.MarketCurrency)
-						return
 
 						ticker, err := t.getLatestPrice(ctx, market.MarketKey)
 						if err != nil {

@@ -44,7 +44,7 @@ func TestBuySuccess(t *testing.T) {
 
 	openOrderMatcher := getTestOpenOrderMatcher(BuyOrder)
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(BuyOrder)
+	orderModelMatcher := getTestOpenOrderModel(BuyOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -122,7 +122,7 @@ func TestBuyOrderStoreError(t *testing.T) {
 
 	openOrderMatcher := getTestOpenOrderMatcher(BuyOrder)
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(BuyOrder)
+	orderModelMatcher := getTestOpenOrderModel(BuyOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -215,7 +215,7 @@ func TestSellSuccess(t *testing.T) {
 
 	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(SellOrder)
+	orderModelMatcher := getTestOpenOrderModel(SellOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -255,7 +255,7 @@ func TestSellExecuteError(t *testing.T) {
 
 	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(SellOrder)
+	orderModelMatcher := getTestOrderModel(SellOrder, OpenOrderStatus)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -296,7 +296,7 @@ func TestSellOrderStoreError(t *testing.T) {
 
 	openOrderMatcher := getTestOpenOrderMatcher(SellOrder)
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(SellOrder)
+	orderModelMatcher := getTestOpenOrderModel(SellOrder)
 
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
@@ -384,7 +384,7 @@ func TestOpenOrderUpdateBuy(t *testing.T) {
 	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(BuyOrder)
+	orderModelMatcher := getTestClosedOrderModel(BuyOrder, "0.045", quantity)
 
 	balances := getTestBalances("1.5", "2.0", "2.0", "2.0")
 	orderMonitor.EXPECT().Start(gomock.Any())
@@ -415,6 +415,7 @@ func TestOpenOrderUpdateBuy(t *testing.T) {
 		Quantity:       utils.StringToDecimal(quantity),
 		QuantityFilled: utils.StringToDecimal(quantity),
 		TradePrice:     utils.StringToDecimal("0.045"),
+		CloseTimestamp: int64(100000000),
 	}
 
 	time.Sleep(time.Millisecond * 10)
@@ -436,7 +437,7 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
 
 	marketModel := getTestMarket()
-	orderModelMatcher := getTestOrderModel(SellOrder)
+	orderModelMatcher := getTestClosedOrderModel(SellOrder, "0.045", quantity)
 
 	balances := getTestBalances("2.0", "2.0", "1.5", "2.0")
 	orderMonitor.EXPECT().Start(gomock.Any())
@@ -467,6 +468,7 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 		Quantity:       utils.StringToDecimal(quantity),
 		QuantityFilled: utils.StringToDecimal(quantity),
 		TradePrice:     utils.StringToDecimal("0.045"),
+		CloseTimestamp: int64(10000000),
 	}
 
 	time.Sleep(time.Millisecond * 10)
@@ -478,4 +480,16 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 	assert.True(t, bMap["btc"].Total.Equals(utils.StringToDecimal("12.0")), "should update available balance on filled order")
 }
 
-//func TestOrderUpdate
+func TestGetBalanceNil(t *testing.T) {
+	mockConfig := newMockDependencies(t)
+	orderMonitor := mockConfig.OrderMonitor
+	exchange := mockConfig.Exchange
+	orderStore := mockConfig.OrderStore
+	marketStore := mockConfig.MarketStore
+	orderUpdateChannel := mockConfig.OrderUpdateChannel
+	manager := NewManager(orderMonitor, orderUpdateChannel, exchange, orderStore, marketStore)
+
+	balances := manager.GetBalance("xvc")
+	assert.Equal(t, balances.Total, utils.ZeroDecimal())
+	assert.Equal(t, balances.Available, utils.ZeroDecimal())
+}

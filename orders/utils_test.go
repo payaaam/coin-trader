@@ -7,6 +7,7 @@ import (
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/mocks"
 	"github.com/payaaam/coin-trader/utils"
+	"gopkg.in/volatiletech/null.v6"
 	"testing"
 	"time"
 )
@@ -17,14 +18,40 @@ func getTestMarket() *models.Market {
 	}
 }
 
-func getTestOrderModel(orderType string) *db.OrderModelMatcher {
+func getTestOpenOrderModel(orderType string) *db.OrderModelMatcher {
 	return &db.OrderModelMatcher{
 		Type:            orderType,
 		MarketID:        MarketID,
 		ExchangeOrderID: orderID,
 		Limit:           limit,
 		Quantity:        quantity,
-		Status:          db.OpenOrderStatus,
+		Status:          OpenOrderStatus,
+	}
+}
+
+func getTestClosedOrderModel(orderType string, tradePrice string, quantityFilled string) *db.OrderModelMatcher {
+	return &db.OrderModelMatcher{
+		Type:            orderType,
+		MarketID:        MarketID,
+		ExchangeOrderID: orderID,
+		Limit:           limit,
+		Quantity:        quantity,
+		QuantityFilled:  null.StringFrom(quantityFilled),
+		TradePrice:      null.StringFrom(tradePrice),
+		Status:          FilledOrderStatus,
+	}
+}
+
+func getTestOrderModel(orderType string, orderStatus string) *db.OrderModelMatcher {
+	return &db.OrderModelMatcher{
+		Type:            orderType,
+		MarketID:        MarketID,
+		ExchangeOrderID: orderID,
+		Limit:           limit,
+		Quantity:        quantity,
+		QuantityFilled:  null.StringFrom(quantity),
+		TradePrice:      null.StringFrom(limit),
+		Status:          orderStatus,
 	}
 }
 

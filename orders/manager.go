@@ -336,7 +336,14 @@ func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decima
 
 // Get Available Balance
 func (m *Manager) GetBalance(marketKey string) *Balance {
-	return m.Balances[utils.Normalize(marketKey)]
+	b := m.Balances[utils.Normalize(marketKey)]
+	if b != nil {
+		return b
+	}
+	return &Balance{
+		Available: utils.ZeroDecimal(),
+		Total:     utils.ZeroDecimal(),
+	}
 }
 
 // Save an Order to the database

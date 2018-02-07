@@ -639,7 +639,7 @@ func testOrdersSelect(t *testing.T) {
 }
 
 var (
-	orderDBTypes = map[string]string{`CloseTime`: `bigint`, `ExchangeOrderID`: `text`, `ID`: `integer`, `Limit`: `text`, `MarketID`: `integer`, `OpenTime`: `bigint`, `Quantity`: `text`, `SellPrice`: `text`, `Status`: `text`, `Type`: `text`}
+	orderDBTypes = map[string]string{`CloseTime`: `bigint`, `ExchangeOrderID`: `text`, `ID`: `integer`, `Limit`: `text`, `MarketID`: `integer`, `OpenTime`: `bigint`, `Quantity`: `text`, `QuantityFilled`: `text`, `SellPrice`: `text`, `Status`: `text`, `Type`: `text`}
 	_            = bytes.MinRead
 )
 
