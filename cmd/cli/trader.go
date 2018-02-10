@@ -5,19 +5,17 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
+	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/orders"
 	"github.com/payaaam/coin-trader/strategies"
-	"github.com/shopspring/decimal"
-	"io/ioutil"
-	"strings"
-	//"github.com/payaaam/coin-trader/db/models"
-	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	"io/ioutil"
 	"os"
 	"os/signal"
-	//"gopkg.in/volatiletech/null.v6"
+	"strings"
 	"time"
 )
 
@@ -84,10 +82,11 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 
 			for _, market := range markets {
 				// Get Balances
+
 				btcBalance := t.getBalance("btc")
 				altBalance := t.getBalance(market.MarketCurrency)
-				log.Infof("BTC Balance: %v", btcBalance)
-				log.Infof("%s Balance: %v", strings.ToUpper(market.MarketCurrency), altBalance)
+				t.printBalance("btc")
+				t.printBalance(market.MarketCurrency)
 
 				// Generate Chart
 				chart, err := t.getChart(ctx, market.MarketKey, exchange, interval)
@@ -120,7 +119,8 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 						if err != nil {
 							logError(market.MarketKey, interval, err)
 						}
-						log.Infof("%s Balance: %v", strings.ToUpper(market.MarketCurrency), altBalance)
+						// Print Out Balance after Sell
+						t.printBalance(market.MarketCurrency)
 					}
 
 					continue
@@ -151,30 +151,41 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 						if err != nil {
 							logError(market.MarketKey, interval, err)
 						}
-						log.Infof("%s Balance: %v", strings.ToUpper(market.MarketCurrency), altBalance)
 					}
 				}
 				continue
 			}
 			btcBalance = t.getBalance("btc")
 			log.Infof("End BTC Balance: %v", btcBalance)
-
+			t.saveBalancesToFile()
 		}
 	}()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	for _ = range signalChan {
-		balanceMap := t.orderManager.GetBalances()
-		err := writeBalancesToFile(balanceMap)
-		if err != nil {
-			log.Errorf("Error writing balance file: %v", err)
-		}
+		t.saveBalancesToFile()
 
 		log.Warn("received SIGINT or SIGTERM")
 		break
 	}
 	log.Info("Shutting down")
+}
+
+func (t *TraderCommand) printBalance(currency string) {
+	balance := t.getBalance(currency)
+	if balance.Equal(utils.ZeroDecimal()) {
+		return
+	}
+
+	log.Infof("%s Balance: %v", strings.ToUpper(currency), balance)
+}
+
+func (t *TraderCommand) saveBalancesToFile() {
+	err := writeBalancesToFile(t.orderManager.GetBalances())
+	if err != nil {
+		log.Errorf("Error writing balance file: %v", err)
+	}
 }
 
 func (t *TraderCommand) getChart(ctx context.Context, marketKey string, exchange string, interval string) (*charts.CloudChart, error) {
