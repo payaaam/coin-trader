@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/orders"
 	"github.com/payaaam/coin-trader/strategies"
 	"github.com/shopspring/decimal"
+	"io/ioutil"
+	"strings"
 	//"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
@@ -18,6 +21,7 @@ import (
 	"time"
 )
 
+const SimulationBalanceFile = "./balance.json"
 const DefaultPricePadding = "1.01"
 const DefaultLimit = "0.01"
 const DefaultQuantity = "1"
@@ -48,11 +52,12 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 	ctx := context.Background()
 
 	if isSimulation == true {
-		// Setup Order Simulation with bitcoin value
-		t.orderManager.SetupSimulation(&orders.Balance{
-			Total:     utils.StringToDecimal("1.0"),
-			Available: utils.StringToDecimal("1.0"),
-		})
+		bMap, err := loadBalancesFromFile()
+		if err != nil {
+			log.Fatal(err)
+		}
+		// Setup Order Simulation with Balances
+		t.orderManager.SetupSimulation(bMap)
 
 		log.Info("Simulation Mode")
 	} else {
@@ -81,6 +86,8 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 				// Get Balances
 				btcBalance := t.getBalance("btc")
 				altBalance := t.getBalance(market.MarketCurrency)
+				log.Infof("BTC Balance: %v", btcBalance)
+				log.Infof("%s Balance: %v", strings.ToUpper(market.MarketCurrency), altBalance)
 
 				// Generate Chart
 				chart, err := t.getChart(ctx, market.MarketKey, exchange, interval)
@@ -89,9 +96,9 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 					continue
 				}
 
+				// Sell
 				if hasBalance(altBalance) {
 					if ichimokuCloudStrategy.ShouldSell(chart) == true {
-
 						log.Infof("Executed Sell: %s to %s", market.MarketCurrency, market.BaseCurrency)
 						ticker, err := t.getLatestPrice(ctx, market.MarketKey)
 						if err != nil {
@@ -107,14 +114,15 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 							BaseCurrency:   market.BaseCurrency,
 						}
 
-						log.Infof("Executed Sell: %s to %s", market.MarketCurrency, market.BaseCurrency)
 						log.Infof("Quantity: %v", altBalance)
 						log.Infof("Price: %v", limit)
-						err = t.orderManager.ExecuteLimitBuy(ctx, newSellOrder)
+						err = t.orderManager.ExecuteLimitSell(ctx, newSellOrder)
 						if err != nil {
 							logError(market.MarketKey, interval, err)
 						}
+						log.Infof("%s Balance: %v", strings.ToUpper(market.MarketCurrency), altBalance)
 					}
+
 					continue
 				}
 
@@ -137,14 +145,13 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 							MarketCurrency: market.MarketCurrency,
 							BaseCurrency:   market.BaseCurrency,
 						}
-						log.Infof("Executed Buy: %s to %s", market.BaseCurrency, market.MarketCurrency)
 						log.Infof("Quantity: %v", quantity)
 						log.Infof("Price: %v", limit)
 						err = t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
 						if err != nil {
 							logError(market.MarketKey, interval, err)
 						}
-
+						log.Infof("%s Balance: %v", strings.ToUpper(market.MarketCurrency), altBalance)
 					}
 				}
 				continue
@@ -158,6 +165,12 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	for _ = range signalChan {
+		balanceMap := t.orderManager.GetBalances()
+		err := writeBalancesToFile(balanceMap)
+		if err != nil {
+			log.Errorf("Error writing balance file: %v", err)
+		}
+
 		log.Warn("received SIGINT or SIGTERM")
 		break
 	}
@@ -212,4 +225,54 @@ func getOrderPrice(orderType string, ticker *exchanges.Ticker) decimal.Decimal {
 }
 func getOrderQuantity(ticker *exchanges.Ticker, btcMax decimal.Decimal) decimal.Decimal {
 	return btcMax.Div(ticker.Ask)
+}
+
+func loadBalancesFromFile() (map[string]*orders.Balance, error) {
+	var balanceMap map[string]*orders.Balance
+
+	balanceData, err := ioutil.ReadFile(SimulationBalanceFile)
+	if err != nil {
+		if os.IsNotExist(err) == false {
+			log.Error(err)
+			return nil, err
+		}
+
+		// Create new balance file
+		bMap := defaultBalance()
+		err = writeBalancesToFile(bMap)
+		if err != nil {
+			return nil, err
+		}
+		return bMap, nil
+	}
+
+	err = json.Unmarshal(balanceData, &balanceMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return balanceMap, nil
+}
+
+func defaultBalance() map[string]*orders.Balance {
+	balanceMap := make(map[string]*orders.Balance)
+	balanceMap["btc"] = &orders.Balance{
+		Available: utils.StringToDecimal("1"),
+		Total:     utils.StringToDecimal("1"),
+	}
+	return balanceMap
+}
+
+func writeBalancesToFile(bMap map[string]*orders.Balance) error {
+	data, err := json.Marshal(bMap)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(SimulationBalanceFile, data, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
