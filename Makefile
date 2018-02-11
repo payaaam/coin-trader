@@ -1,7 +1,7 @@
 models:
 	cd scripts && sqlboiler postgres --wipe --output ../db/models
 
-mocks: mock-db mock-exchange mock-manager
+mocks: mock-db mock-exchange mock-manager mock-strategy
 
 mock-db:
 	mockgen -source=./db/db.go -destination=./mocks/db.go -package=mocks
@@ -11,6 +11,9 @@ mock-exchange:
 
 mock-manager: 
 	mockgen -source=./orders/orders.go -destination=./orders/orders_mock.go -package=orders
+
+mock-strategy: 
+	mockgen -source=./strategies/strategy.go -destination=./mocks/strategy.go -package=mocks
 
 cli:
 	go build -o bin/cli cmd/cli/*.go

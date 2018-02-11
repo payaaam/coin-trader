@@ -56,3 +56,36 @@ func (o *OpenOrderMatcher) Matches(order interface{}) bool {
 func (o *OpenOrderMatcher) String() string {
 	return "does not match the open order"
 }
+
+type LimitOrderMatcher struct {
+	Limit          decimal.Decimal
+	Quantity       decimal.Decimal
+	MarketCurrency string
+	BaseCurrency   string
+}
+
+func (o *LimitOrderMatcher) Matches(order interface{}) bool {
+	toTest := order.(*LimitOrder)
+
+	if toTest.BaseCurrency != o.BaseCurrency {
+		return false
+	}
+
+	if toTest.MarketCurrency != o.MarketCurrency {
+		return false
+	}
+
+	if toTest.Limit.Equal(o.Limit) == false {
+		return false
+	}
+
+	if toTest.Quantity.Equals(o.Quantity) == false {
+		return false
+	}
+	return true
+
+}
+
+func (o *LimitOrderMatcher) String() string {
+	return "does not match the limit order"
+}

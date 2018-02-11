@@ -5,6 +5,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
+	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/orders"
 	"github.com/payaaam/coin-trader/strategies"
@@ -81,73 +82,11 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 			log.Infof("Start BTC Balance: %v", btcBalance)
 
 			for _, market := range markets {
-				// Get Balances
-				btcBalance := t.getBalance("btc")
-				altBalance := t.getBalance(market.MarketCurrency)
 
-				// Generate Chart
-				chart, err := t.getChart(ctx, market.MarketKey, exchange, interval)
+				err = t.trade(ctx, market, ichimokuCloudStrategy, exchange, interval)
 				if err != nil {
-					log.Error(err)
-					continue
+					logError(market.MarketKey, interval, err)
 				}
-
-				// Sell
-				if hasBalance(altBalance) {
-					if ichimokuCloudStrategy.ShouldSell(chart) == true {
-						log.Infof("Executed Sell: %s to %s", market.MarketCurrency, market.BaseCurrency)
-						ticker, err := t.getLatestPrice(ctx, market.MarketKey)
-						if err != nil {
-							log.Error(err)
-							continue
-						}
-						limit := getOrderPrice(orders.SellOrder, ticker)
-
-						newSellOrder := &orders.LimitOrder{
-							Limit:          limit,
-							Quantity:       altBalance,
-							MarketCurrency: market.MarketCurrency,
-							BaseCurrency:   market.BaseCurrency,
-						}
-
-						log.Infof("Quantity: %v", altBalance)
-						log.Infof("Price: %v", limit)
-						err = t.orderManager.ExecuteLimitSell(ctx, newSellOrder)
-						if err != nil {
-							logError(market.MarketKey, interval, err)
-						}
-					}
-					continue
-				}
-
-				if hasBalance(btcBalance) && hasZeroBalance(altBalance) {
-					if ichimokuCloudStrategy.ShouldBuy(chart) == true {
-
-						log.Infof("Executed Buy: %s to %s", market.BaseCurrency, market.MarketCurrency)
-
-						ticker, err := t.getLatestPrice(ctx, market.MarketKey)
-						if err != nil {
-							log.Error(err)
-							continue
-						}
-						limit := getOrderPrice(orders.BuyOrder, ticker)
-						quantity := getOrderQuantity(ticker, getBTCLimit())
-
-						newBuyOrder := &orders.LimitOrder{
-							Limit:          limit,
-							Quantity:       quantity,
-							MarketCurrency: market.MarketCurrency,
-							BaseCurrency:   market.BaseCurrency,
-						}
-						log.Infof("Quantity: %v", quantity)
-						log.Infof("Price: %v", limit)
-						err = t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
-						if err != nil {
-							logError(market.MarketKey, interval, err)
-						}
-					}
-				}
-				continue
 			}
 			btcBalance = t.getBalance("btc")
 			log.Infof("End BTC Balance: %v", btcBalance)
@@ -164,6 +103,74 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 		break
 	}
 	log.Info("Shutting down")
+}
+
+func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strategy strategies.Strategy, exchange string, interval string) error {
+	btcBalance := t.getBalance("btc")
+	altBalance := t.getBalance(market.MarketCurrency)
+
+	// Generate Chart
+	chart, err := t.getChart(ctx, market.MarketKey, exchange, interval)
+	if err != nil {
+		return err
+	}
+
+	// Sell
+	if hasBalance(altBalance) {
+		if strategy.ShouldSell(chart) == true {
+			log.Infof("Executed Sell: %s to %s", market.MarketCurrency, market.BaseCurrency)
+			ticker, err := t.getLatestPrice(ctx, market.MarketKey)
+			if err != nil {
+				return err
+			}
+			limit := getOrderPrice(orders.SellOrder, ticker)
+
+			newSellOrder := &orders.LimitOrder{
+				Limit:          limit,
+				Quantity:       altBalance,
+				MarketCurrency: market.MarketCurrency,
+				BaseCurrency:   market.BaseCurrency,
+			}
+
+			log.Infof("Quantity: %v", altBalance)
+			log.Infof("Price: %v", limit)
+			err = t.orderManager.ExecuteLimitSell(ctx, newSellOrder)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if hasBalance(btcBalance) && hasZeroBalance(altBalance) {
+		if strategy.ShouldBuy(chart) == true {
+
+			log.Infof("Executed Buy: %s to %s", market.BaseCurrency, market.MarketCurrency)
+
+			ticker, err := t.getLatestPrice(ctx, market.MarketKey)
+			if err != nil {
+				return err
+			}
+			limit := getOrderPrice(orders.BuyOrder, ticker)
+			quantity := getOrderQuantity(ticker, getBTCLimit())
+
+			newBuyOrder := &orders.LimitOrder{
+				Limit:          limit,
+				Quantity:       quantity,
+				MarketCurrency: market.MarketCurrency,
+				BaseCurrency:   market.BaseCurrency,
+			}
+			log.Infof("Quantity: %v", quantity)
+			log.Infof("Price: %v", limit)
+			err = t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
+			if err != nil {
+				return err
+
+			}
+		}
+		return nil
+	}
+	return nil
 }
 
 func (t *TraderCommand) printBalance(currency string) {
@@ -202,6 +209,7 @@ func (t *TraderCommand) getBalance(currency string) decimal.Decimal {
 	}
 	return utils.ZeroDecimal()
 }
+
 func hasBalance(b decimal.Decimal) bool {
 	return b.Equal(utils.ZeroDecimal()) == false
 }
@@ -228,6 +236,7 @@ func getOrderPrice(orderType string, ticker *exchanges.Ticker) decimal.Decimal {
 	}
 	return limit
 }
+
 func getOrderQuantity(ticker *exchanges.Ticker, btcMax decimal.Decimal) decimal.Decimal {
 	return btcMax.Div(ticker.Ask)
 }
