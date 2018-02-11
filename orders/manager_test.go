@@ -5,7 +5,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/payaaam/coin-trader/mocks"
 	"github.com/payaaam/coin-trader/utils"
-	//log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 	"testing"
@@ -19,6 +19,7 @@ var MarketKey = "btc-ltc"
 var someError = errors.New("some error")
 var limit = "0.05"
 var quantity = "10"
+var quantitySell = "2"
 var orderID = "some-order-id"
 var ctx = context.Background()
 var MarketID = 1
@@ -226,20 +227,23 @@ func TestSellSuccess(t *testing.T) {
 
 	err := manager.Setup()
 	assert.Nil(t, err, "should not error")
-
 	err = manager.ExecuteLimitSell(ctx, &LimitOrder{
 		BaseCurrency:   "BTC",
 		MarketCurrency: "LTC",
 		Limit:          utils.StringToDecimal("0.05"),
-		Quantity:       utils.StringToDecimal("10"),
+		Quantity:       utils.StringToDecimal(quantitySell),
 	})
 	assert.Nil(t, err, "should not return notEnoughFundsError")
 
-	limitDecimal := utils.StringToDecimal(limit)
-	quantityDecimal := utils.StringToDecimal(quantity)
-	expectedBalance := utils.StringToDecimal("2").Sub(limitDecimal.Mul(quantityDecimal))
-	actualBalance := manager.GetBalances()["ltc"].Available
-	assert.Equal(t, expectedBalance, actualBalance, "should deduct purchase price from balance")
+	// Market Balance
+	quantityDecimal := utils.StringToDecimal(quantitySell)
+	marketExpectedBalance := utils.StringToDecimal("2.0").Sub(quantityDecimal)
+	marketActualBalance := manager.GetBalance("ltc").Available
+	assert.Equal(t, marketExpectedBalance, marketActualBalance, "should deduct quantity from market balance")
+
+	// BTC Balance
+	baseActualBalance := manager.GetBalance("btc").Available
+	assert.Equal(t, utils.StringToDecimal("2.0"), baseActualBalance, "should not touch base currency balance")
 }
 
 func TestSellExecuteError(t *testing.T) {
@@ -271,7 +275,7 @@ func TestSellExecuteError(t *testing.T) {
 		BaseCurrency:   "BTC",
 		MarketCurrency: "LTC",
 		Limit:          utils.StringToDecimal("0.05"),
-		Quantity:       utils.StringToDecimal("10"),
+		Quantity:       utils.StringToDecimal(quantitySell),
 	})
 	assert.Equal(t, someError, err, "should return errors from exchange")
 
@@ -312,7 +316,7 @@ func TestSellOrderStoreError(t *testing.T) {
 		BaseCurrency:   "BTC",
 		MarketCurrency: "LTC",
 		Limit:          utils.StringToDecimal("0.05"),
-		Quantity:       utils.StringToDecimal("10"),
+		Quantity:       utils.StringToDecimal(quantitySell),
 	})
 	assert.Equal(t, someError, err, "should return errors from exchange")
 }
@@ -343,7 +347,7 @@ func TestSellMarketStoreError(t *testing.T) {
 		BaseCurrency:   "BTC",
 		MarketCurrency: "LTC",
 		Limit:          utils.StringToDecimal("0.05"),
-		Quantity:       utils.StringToDecimal("10"),
+		Quantity:       utils.StringToDecimal(quantitySell),
 	})
 	assert.Equal(t, someError, err, "should return errors from exchange")
 }
@@ -439,7 +443,7 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 	marketModel := getTestMarket()
 	orderModelMatcher := getTestClosedOrderModel(SellOrder, "0.045", quantity)
 
-	balances := getTestBalances("2.0", "2.0", "1.5", "2.0")
+	balances := getTestBalances("2.0", "2.0", "0", "10")
 	orderMonitor.EXPECT().Start(gomock.Any())
 	exchange.EXPECT().GetBalances().Return(balances, nil)
 	marketStore.EXPECT().GetMarket(ctx, "bittrex", MarketKey).Return(marketModel, nil)
@@ -454,8 +458,8 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 10)
 	bMap := manager.GetBalances()
-	assert.True(t, bMap["ltc"].Available.Equals(utils.StringToDecimal("1.5")), "should not update available balance for open order")
-	assert.True(t, bMap["ltc"].Total.Equals(utils.StringToDecimal("2.0")), "should not update total balance for open order")
+	assert.True(t, bMap["ltc"].Available.Equals(utils.StringToDecimal("0")), "should not update available balance for open order")
+	assert.True(t, bMap["ltc"].Total.Equals(utils.StringToDecimal("10")), "should not update total balance for open order")
 
 	orderUpdateChannel <- &OpenOrder{
 		ID:             orderID,
@@ -473,11 +477,12 @@ func TestOpenOrderUpdateSell(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 10)
 	bMap = manager.GetBalances()
-	assert.True(t, bMap["ltc"].Available.Equals(utils.StringToDecimal("1.55")), "should update available balance on filled order")
-	assert.True(t, bMap["ltc"].Total.Equals(utils.StringToDecimal("1.55")), "should update available balance on filled order")
+	log.Info(bMap["ltc"])
+	assert.True(t, bMap["ltc"].Available.Equals(utils.StringToDecimal("0")), "should update market available balance on filled order")
+	assert.True(t, bMap["ltc"].Total.Equals(utils.StringToDecimal("0")), "should update market available balance on filled order")
 
-	assert.True(t, bMap["btc"].Available.Equals(utils.StringToDecimal("12.0")), "should update available balance on filled order")
-	assert.True(t, bMap["btc"].Total.Equals(utils.StringToDecimal("12.0")), "should update available balance on filled order")
+	assert.True(t, bMap["btc"].Available.Equals(utils.StringToDecimal("2.45")), "should update base available balance on filled order")
+	assert.True(t, bMap["btc"].Total.Equals(utils.StringToDecimal("2.45")), "should update base available balance on filled order")
 }
 
 func TestGetBalanceNil(t *testing.T) {

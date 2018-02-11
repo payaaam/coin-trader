@@ -82,11 +82,8 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 
 			for _, market := range markets {
 				// Get Balances
-
 				btcBalance := t.getBalance("btc")
 				altBalance := t.getBalance(market.MarketCurrency)
-				t.printBalance("btc")
-				t.printBalance(market.MarketCurrency)
 
 				// Generate Chart
 				chart, err := t.getChart(ctx, market.MarketKey, exchange, interval)
@@ -119,10 +116,7 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 						if err != nil {
 							logError(market.MarketKey, interval, err)
 						}
-						// Print Out Balance after Sell
-						t.printBalance(market.MarketCurrency)
 					}
-
 					continue
 				}
 

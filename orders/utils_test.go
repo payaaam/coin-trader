@@ -7,6 +7,7 @@ import (
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/mocks"
 	"github.com/payaaam/coin-trader/utils"
+	//log "github.com/sirupsen/logrus"
 	"gopkg.in/volatiletech/null.v6"
 	"testing"
 	"time"
@@ -19,7 +20,8 @@ func getTestMarket() *models.Market {
 }
 
 func getTestOpenOrderModel(orderType string) *db.OrderModelMatcher {
-	return &db.OrderModelMatcher{
+
+	o := &db.OrderModelMatcher{
 		Type:            orderType,
 		MarketID:        MarketID,
 		ExchangeOrderID: orderID,
@@ -27,6 +29,11 @@ func getTestOpenOrderModel(orderType string) *db.OrderModelMatcher {
 		Quantity:        quantity,
 		Status:          OpenOrderStatus,
 	}
+
+	if orderType == SellOrder {
+		o.Quantity = quantitySell
+	}
+	return o
 }
 
 func getTestClosedOrderModel(orderType string, tradePrice string, quantityFilled string) *db.OrderModelMatcher {
@@ -56,7 +63,7 @@ func getTestOrderModel(orderType string, orderStatus string) *db.OrderModelMatch
 }
 
 func getTestOpenOrderMatcher(orderType string) *OpenOrderMatcher {
-	return &OpenOrderMatcher{
+	o := &OpenOrderMatcher{
 		Type:           orderType,
 		BaseCurrency:   BaseCurrency,
 		MarketCurrency: MarketCurrency,
@@ -65,8 +72,13 @@ func getTestOpenOrderMatcher(orderType string) *OpenOrderMatcher {
 		Quantity:       utils.StringToDecimal(quantity),
 		Status:         OpenOrderStatus,
 	}
-}
 
+	if orderType == SellOrder {
+		o.Quantity = utils.StringToDecimal(quantitySell)
+	}
+
+	return o
+}
 func newMockDependencies(t *testing.T) *ManagerTestConfig {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

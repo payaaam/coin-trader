@@ -240,13 +240,13 @@ func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) {
 
 	if order.Type == SellOrder {
 		// Update Market Currency Balance (ALT)
-		marketBalance.Available = marketBalance.Available.Add(originalCost)
-		marketBalance.Available = marketBalance.Available.Sub(actualCost)
-		marketBalance.Total = marketBalance.Total.Sub(actualCost)
+		marketBalance.Available = marketBalance.Available.Add(order.Quantity)
+		marketBalance.Available = marketBalance.Available.Sub(order.QuantityFilled)
+		marketBalance.Total = marketBalance.Total.Sub(order.QuantityFilled)
 
 		// Update Base Currency (BTC)
-		baseBalance.Available = baseBalance.Available.Add(order.QuantityFilled)
-		baseBalance.Total = baseBalance.Total.Add(order.QuantityFilled)
+		baseBalance.Available = baseBalance.Available.Add(actualCost)
+		baseBalance.Total = baseBalance.Total.Add(actualCost)
 	}
 
 	m.setBalance(order.MarketCurrency, marketBalance)
@@ -296,10 +296,10 @@ func (m *Manager) updateBalanceFromLimitOrder(orderType string, order *LimitOrde
 
 	if orderType == SellOrder {
 		marketCurrencyBalance := m.GetBalance(order.MarketCurrency).Available
-		orderCost := order.Limit.Mul(order.Quantity)
+		//orderCost := order.Limit.Mul(order.Quantity)
 
 		// Debit Base Currency Available
-		newBalance := marketCurrencyBalance.Sub(orderCost)
+		newBalance := marketCurrencyBalance.Sub(order.Quantity)
 
 		if newBalance.Sign() == -1 {
 			return ErrNotEnoughFunds
