@@ -28,6 +28,7 @@ const EveryTenMinutes = 10
 
 type TraderCommand struct {
 	config         *Config
+	isSimulation   bool
 	marketStore    db.MarketStoreInterface
 	chartStore     db.ChartStoreInterface
 	tickStore      db.TickStoreInterface
@@ -43,6 +44,7 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 		tickStore:      tickStore,
 		exchangeClient: client,
 		orderManager:   orderManager,
+		isSimulation:   false,
 	}
 }
 
@@ -51,6 +53,7 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 	ctx := context.Background()
 
 	if isSimulation == true {
+		t.isSimulation = true
 		bMap, err := loadBalancesFromFile()
 		if err != nil {
 			log.Fatal(err)
@@ -82,7 +85,6 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 			log.Infof("Start BTC Balance: %v", btcBalance)
 
 			for _, market := range markets {
-
 				err = t.trade(ctx, market, ichimokuCloudStrategy, exchange, interval)
 				if err != nil {
 					logError(market.MarketKey, interval, err)
@@ -123,7 +125,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			limit := getOrderPrice(orders.SellOrder, ticker)
+			limit := getOrderPrice(orders.SellOrder, ticker, t.isSimulation)
 
 			newSellOrder := &orders.LimitOrder{
 				Limit:          limit,
@@ -151,7 +153,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			limit := getOrderPrice(orders.BuyOrder, ticker)
+			limit := getOrderPrice(orders.BuyOrder, ticker, t.isSimulation)
 			quantity := getOrderQuantity(ticker, getBTCLimit())
 
 			newBuyOrder := &orders.LimitOrder{
@@ -225,9 +227,17 @@ func getDefaultQuantity() decimal.Decimal {
 	return utils.StringToDecimal(DefaultQuantity)
 }
 
-func getOrderPrice(orderType string, ticker *exchanges.Ticker) decimal.Decimal {
+func getOrderPrice(orderType string, ticker *exchanges.Ticker, isSimulation bool) decimal.Decimal {
 	pricePadding := utils.StringToDecimal(DefaultPricePadding)
 	var limit decimal.Decimal
+
+	if isSimulation == true {
+		if orderType == orders.BuyOrder {
+			return ticker.Ask
+		} else if orderType == orders.SellOrder {
+			return ticker.Bid
+		}
+	}
 
 	if orderType == orders.BuyOrder {
 		limit = ticker.Ask.Mul(pricePadding)
