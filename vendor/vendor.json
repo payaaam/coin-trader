@@ -148,6 +148,12 @@
 			"revisionTime": "2017-05-23T03:00:23Z"
 		},
 		{
+			"checksumSHA1": "EHX3cYXR8w7qAYhblf6pEWqVNdY=",
+			"path": "github.com/nlopes/slack",
+			"revision": "8ab4d0b364ef1e9af5d102531da20d5ec902b6c4",
+			"revisionTime": "2018-02-10T15:18:52Z"
+		},
+		{
 			"checksumSHA1": "zZg0J0MqvnqXVYo644QDvnUinrc=",
 			"path": "github.com/pelletier/go-toml",
 			"revision": "4692b8f9babfc93db58cc592ba2689d8736781de",

@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"github.com/shopspring/decimal"
 	"strings"
+
+	"github.com/shopspring/decimal"
 )
 
 func Normalize(s string) string {

@@ -4,12 +4,13 @@ import (
 	"github.com/payaaam/coin-trader/db"
 	"github.com/satori/go.uuid"
 	//"github.com/payaaam/coin-trader/db/models"
+	"time"
+
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type Manager struct {

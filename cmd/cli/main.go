@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os"
+
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
@@ -10,7 +12,6 @@ import (
 	"github.com/payaaam/coin-trader/orders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"os"
 )
 
 func main() {

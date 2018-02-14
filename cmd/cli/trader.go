@@ -2,22 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"strings"
+	"time"
+
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/orders"
+	"github.com/payaaam/coin-trader/slack"
 	"github.com/payaaam/coin-trader/strategies"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	"io/ioutil"
-	"os"
-	"os/signal"
-	"strings"
-	"time"
 )
 
 const SimulationBalanceFile = "./balance.json"
@@ -51,6 +53,7 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool) {
 	log.Infof("Starting Automated Trader %s", exchange)
 	ctx := context.Background()
+	slack.Init()
 
 	if isSimulation == true {
 		t.isSimulation = true
@@ -140,6 +143,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
+			slack.PostTrade("Sell", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
 		}
 		return nil
 	}
@@ -167,8 +171,8 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			err = t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
 			if err != nil {
 				return err
-
 			}
+			slack.PostTrade("Buy", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
 		}
 		return nil
 	}
