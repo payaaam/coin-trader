@@ -7,6 +7,7 @@ import (
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/exchanges"
+	"github.com/payaaam/coin-trader/orders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"os"
@@ -41,6 +42,13 @@ func main() {
 		Destination: &marketKey,
 	}
 
+	var isSimulation bool
+	simulateFlag := cli.BoolFlag{
+		Name:        "simulate",
+		Usage:       "prevents order execution",
+		Destination: &isSimulation,
+	}
+
 	app.Commands = []cli.Command{
 		{
 			Name:  "ticker",
@@ -73,10 +81,11 @@ func main() {
 				return nil
 			},
 		},
+
 		{
 			Name:  "trader",
 			Usage: "makes you money $$$$",
-			Flags: []cli.Flag{exchangeFlag, intervalFlag},
+			Flags: []cli.Flag{exchangeFlag, intervalFlag, simulateFlag},
 			Action: func(c *cli.Context) error {
 				config := NewConfig()
 				initLogging(config.LogLevel, true)
@@ -102,9 +111,15 @@ func main() {
 				marketStore := db.NewMarketStore(postgres)
 				chartStore := db.NewChartStore(postgres)
 				tickStore := db.NewTickStore(postgres)
+				orderStore := db.NewOrderStore(postgres)
 
-				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient)
-				traderCommand.Run(exchange, interval)
+				orderUpdateChannel := make(chan *orders.OpenOrder)
+				orderMonitor := orders.NewMonitor(exchangeClient, 10)
+				orderManager := orders.NewManager(orderMonitor, orderUpdateChannel, exchangeClient, orderStore, marketStore)
+
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient, orderManager)
+
+				traderCommand.Run(exchange, interval, isSimulation)
 				return nil
 			},
 		},

@@ -5,3 +5,5 @@ bin
 # Ignore Vendor Repos
 vendor/*/
 .vscode
+
+balance.json

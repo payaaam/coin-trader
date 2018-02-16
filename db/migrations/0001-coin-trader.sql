@@ -109,9 +109,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS "chart_id_timestamp_uniq_idx" ON "tick" USING 
 ALTER TABLE "tick" ADD CONSTRAINT "chart_fk" FOREIGN KEY ("chart_id") REFERENCES "chart"(id);
 
 
+-- Order
+CREATE SEQUENCE IF NOT EXISTS "order_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE TABLE IF NOT EXISTS "order" (
+    "id" integer NOT NULL DEFAULT nextval('order_id_seq'::regclass),
+    "market_id" integer NOT NULL,
+    "type" text NOT NULL,
+    "exchange_order_id" text NOT NULL,
+    "limit" text NOT NULL,
+    "quantity" text NOT NULL,
+    "status" text NOT NULL,
+    "sell_price" text,
+    "open_time" bigint NOT NULL,
+    "close_time" bigint
+);
+
+
+-- Primary Key Chart
+ALTER TABLE  "order" DROP CONSTRAINT IF EXISTS "order_pkey";
+ALTER TABLE  "order" ADD CONSTRAINT "order_pkey" PRIMARY KEY ("id");
+
+-- Chart Indexes
+CREATE INDEX IF NOT EXISTS "exchange_order_idx" ON "order" USING btree ("exchange_order_id");
+CREATE INDEX IF NOT EXISTS "market_id_idx" ON "order" USING btree ("market_id");
+
+-- Foreign Key to Market
+ALTER TABLE "order" ADD CONSTRAINT "fk_market_id" FOREIGN KEY ("market_id") REFERENCES "market"("id");
+
 
 -- +migrate Down notransaction
 -- Market Tables
+
+
+DROP TABLE IF EXISTS "order" CASCADE;
 DROP TABLE IF EXISTS "market" CASCADE;
 DROP TABLE IF EXISTS "exchange" CASCADE;
 DROP TABLE IF EXISTS "chart" CASCADE;

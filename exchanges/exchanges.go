@@ -3,14 +3,21 @@ package exchanges
 import (
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
+	"github.com/shopspring/decimal"
 )
 
 // All Exchanges must follow this interface
 type Exchange interface {
+	GetMarketKey(base string, market string) string
 	GetBitcoinMarkets() ([]*Market, error)
 	GetCandles(tradingPair string, interval string) ([]*charts.Candle, error)
 	GetLatestCandle(tradingPair string, chartInterval string) (*charts.Candle, error)
-	ExecuteLimitBuy(tradingPair string, price string, quantity string) (string, error)
+	ExecuteLimitBuy(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error)
+	ExecuteLimitSell(tradingPair string, price decimal.Decimal, quantity decimal.Decimal) (string, error)
+	GetBalances() ([]*Balance, error)
+	GetOrder(orderID string) (*Order, error)
+	CancelOrder(orderID string) error
+	GetTicker(tradingPair string) (*Ticker, error)
 }
 
 type Market struct {
@@ -20,6 +27,29 @@ type Market struct {
 	BaseCurrencyName   string
 	MarketCurrency     string
 	MarketCurrencyName string
+}
+type Ticker struct {
+	Bid  decimal.Decimal
+	Ask  decimal.Decimal
+	Last decimal.Decimal
+}
+type Balance struct {
+	BaseCurrency string
+	Total        decimal.Decimal
+	Available    decimal.Decimal
+}
+
+type Order struct {
+	Type           string
+	MarketKey      string
+	OpenTimestamp  int64
+	CloseTimestamp int64
+	Quantity       decimal.Decimal
+	Limit          decimal.Decimal
+	TradePrice     decimal.Decimal
+	QuantityFilled decimal.Decimal
+	Status         string
+	ID             string
 }
 
 var Intervals = map[string]map[string]string{

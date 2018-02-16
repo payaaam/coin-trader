@@ -14,7 +14,7 @@ type TickStore struct {
 	db *sql.DB
 }
 
-func NewTickStore(db *sql.DB) *TickStore {
+func NewTickStore(db *sql.DB) TickStoreInterface {
 	return &TickStore{
 		db: db,
 	}

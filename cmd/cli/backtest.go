@@ -18,13 +18,13 @@ import (
 
 type BackTestCommand struct {
 	config         *Config
-	marketStore    *db.MarketStore
-	chartStore     *db.ChartStore
-	tickStore      *db.TickStore
+	marketStore    db.MarketStoreInterface
+	chartStore     db.ChartStoreInterface
+	tickStore      db.TickStoreInterface
 	exchangeClient exchanges.Exchange
 }
 
-func NewBackTestCommand(config *Config, marketStore *db.MarketStore, chartStore *db.ChartStore, tickStore *db.TickStore, client exchanges.Exchange) *BackTestCommand {
+func NewBackTestCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange) *BackTestCommand {
 	return &BackTestCommand{
 		config:         config,
 		marketStore:    marketStore,

@@ -56,6 +56,7 @@ var MarketColumns = struct {
 // marketR is where relationships are stored.
 type marketR struct {
 	Charts ChartSlice
+	Orders OrderSlice
 }
 
 // marketL is where Load methods for each relationship are stored.
@@ -370,6 +371,32 @@ func (o *Market) Charts(exec boil.Executor, mods ...qm.QueryMod) chartQuery {
 	return query
 }
 
+// OrdersG retrieves all the order's order.
+func (o *Market) OrdersG(mods ...qm.QueryMod) orderQuery {
+	return o.Orders(boil.GetDB(), mods...)
+}
+
+// Orders retrieves all the order's order with an executor.
+func (o *Market) Orders(exec boil.Executor, mods ...qm.QueryMod) orderQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"order\".\"market_id\"=?", o.ID),
+	)
+
+	query := Orders(exec, queryMods...)
+	queries.SetFrom(query.Query, "\"order\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"order\".*"})
+	}
+
+	return query
+}
+
 // LoadCharts allows an eager lookup of values, cached into the
 // loaded structs of the objects.
 func (marketL) LoadCharts(e boil.Executor, singular bool, maybeMarket interface{}) error {
@@ -434,6 +461,78 @@ func (marketL) LoadCharts(e boil.Executor, singular bool, maybeMarket interface{
 		for _, local := range slice {
 			if local.ID == foreign.MarketID {
 				local.R.Charts = append(local.R.Charts, foreign)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadOrders allows an eager lookup of values, cached into the
+// loaded structs of the objects.
+func (marketL) LoadOrders(e boil.Executor, singular bool, maybeMarket interface{}) error {
+	var slice []*Market
+	var object *Market
+
+	count := 1
+	if singular {
+		object = maybeMarket.(*Market)
+	} else {
+		slice = *maybeMarket.(*[]*Market)
+		count = len(slice)
+	}
+
+	args := make([]interface{}, count)
+	if singular {
+		if object.R == nil {
+			object.R = &marketR{}
+		}
+		args[0] = object.ID
+	} else {
+		for i, obj := range slice {
+			if obj.R == nil {
+				obj.R = &marketR{}
+			}
+			args[i] = obj.ID
+		}
+	}
+
+	query := fmt.Sprintf(
+		"select * from \"order\" where \"market_id\" in (%s)",
+		strmangle.Placeholders(dialect.IndexPlaceholders, count, 1, 1),
+	)
+	if boil.DebugMode {
+		fmt.Fprintf(boil.DebugWriter, "%s\n%v\n", query, args)
+	}
+
+	results, err := e.Query(query, args...)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load order")
+	}
+	defer results.Close()
+
+	var resultSlice []*Order
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice order")
+	}
+
+	if len(orderAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Orders = resultSlice
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.MarketID {
+				local.R.Orders = append(local.R.Orders, foreign)
 				break
 			}
 		}
@@ -517,6 +616,90 @@ func (o *Market) AddCharts(exec boil.Executor, insert bool, related ...*Chart) e
 	for _, rel := range related {
 		if rel.R == nil {
 			rel.R = &chartR{
+				Market: o,
+			}
+		} else {
+			rel.R.Market = o
+		}
+	}
+	return nil
+}
+
+// AddOrdersG adds the given related objects to the existing relationships
+// of the market, optionally inserting them as new records.
+// Appends related to o.R.Orders.
+// Sets related.R.Market appropriately.
+// Uses the global database handle.
+func (o *Market) AddOrdersG(insert bool, related ...*Order) error {
+	return o.AddOrders(boil.GetDB(), insert, related...)
+}
+
+// AddOrdersP adds the given related objects to the existing relationships
+// of the market, optionally inserting them as new records.
+// Appends related to o.R.Orders.
+// Sets related.R.Market appropriately.
+// Panics on error.
+func (o *Market) AddOrdersP(exec boil.Executor, insert bool, related ...*Order) {
+	if err := o.AddOrders(exec, insert, related...); err != nil {
+		panic(boil.WrapErr(err))
+	}
+}
+
+// AddOrdersGP adds the given related objects to the existing relationships
+// of the market, optionally inserting them as new records.
+// Appends related to o.R.Orders.
+// Sets related.R.Market appropriately.
+// Uses the global database handle and panics on error.
+func (o *Market) AddOrdersGP(insert bool, related ...*Order) {
+	if err := o.AddOrders(boil.GetDB(), insert, related...); err != nil {
+		panic(boil.WrapErr(err))
+	}
+}
+
+// AddOrders adds the given related objects to the existing relationships
+// of the market, optionally inserting them as new records.
+// Appends related to o.R.Orders.
+// Sets related.R.Market appropriately.
+func (o *Market) AddOrders(exec boil.Executor, insert bool, related ...*Order) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.MarketID = o.ID
+			if err = rel.Insert(exec); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"order\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"market_id"}),
+				strmangle.WhereClause("\"", "\"", 2, orderPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.DebugMode {
+				fmt.Fprintln(boil.DebugWriter, updateQuery)
+				fmt.Fprintln(boil.DebugWriter, values)
+			}
+
+			if _, err = exec.Exec(updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.MarketID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &marketR{
+			Orders: related,
+		}
+	} else {
+		o.R.Orders = append(o.R.Orders, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &orderR{
 				Market: o,
 			}
 		} else {

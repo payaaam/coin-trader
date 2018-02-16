@@ -4,7 +4,6 @@ import (
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 	//"github.com/shopspring/decimal"
 	"errors"
 )
@@ -23,6 +22,7 @@ func NewCloudStrategy() *CloudStrategy {
 }
 
 func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
+
 	if chart.Test == false && chart.GetCandleCount() < 120 {
 		return false
 	}
@@ -40,7 +40,6 @@ func (c *CloudStrategy) ShouldBuy(chart *charts.CloudChart) bool {
 
 		cloudPosition, err := getPriceCloudPosition(chart)
 		if err != nil {
-			log.Error(err)
 			return false
 		}
 		//log.Infof("Cloud Position: %v", cloudPosition)

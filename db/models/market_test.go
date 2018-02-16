@@ -535,6 +535,78 @@ func testMarketToManyCharts(t *testing.T) {
 	}
 }
 
+func testMarketToManyOrders(t *testing.T) {
+	var err error
+	tx := MustTx(boil.Begin())
+	defer tx.Rollback()
+
+	var a Market
+	var b, c Order
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, marketDBTypes, true, marketColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Market struct: %s", err)
+	}
+
+	if err := a.Insert(tx); err != nil {
+		t.Fatal(err)
+	}
+
+	randomize.Struct(seed, &b, orderDBTypes, false, orderColumnsWithDefault...)
+	randomize.Struct(seed, &c, orderDBTypes, false, orderColumnsWithDefault...)
+
+	b.MarketID = a.ID
+	c.MarketID = a.ID
+	if err = b.Insert(tx); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(tx); err != nil {
+		t.Fatal(err)
+	}
+
+	order, err := a.Orders(tx).All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range order {
+		if v.MarketID == b.MarketID {
+			bFound = true
+		}
+		if v.MarketID == c.MarketID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := MarketSlice{&a}
+	if err = a.L.LoadOrders(tx, false, (*[]*Market)(&slice)); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.Orders); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.Orders = nil
+	if err = a.L.LoadOrders(tx, true, &a); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.Orders); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", order)
+	}
+}
+
 func testMarketToManyAddOpCharts(t *testing.T) {
 	var err error
 
@@ -601,6 +673,80 @@ func testMarketToManyAddOpCharts(t *testing.T) {
 		}
 
 		count, err := a.Charts(tx).Count()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+func testMarketToManyAddOpOrders(t *testing.T) {
+	var err error
+
+	tx := MustTx(boil.Begin())
+	defer tx.Rollback()
+
+	var a Market
+	var b, c, d, e Order
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, marketDBTypes, false, strmangle.SetComplement(marketPrimaryKeyColumns, marketColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Order{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, orderDBTypes, false, strmangle.SetComplement(orderPrimaryKeyColumns, orderColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(tx); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(tx); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(tx); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*Order{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddOrders(tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.MarketID {
+			t.Error("foreign key was wrong value", a.ID, first.MarketID)
+		}
+		if a.ID != second.MarketID {
+			t.Error("foreign key was wrong value", a.ID, second.MarketID)
+		}
+
+		if first.R.Market != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.Market != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.Orders[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.Orders[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.Orders(tx).Count()
 		if err != nil {
 			t.Fatal(err)
 		}
