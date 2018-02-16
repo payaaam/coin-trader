@@ -3,6 +3,7 @@ package charts
 import (
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
 )
 
 var NotEnoughData = utils.StringToDecimal("-1")
@@ -22,10 +23,6 @@ func NewSMA(period int, exponential bool) *SMA {
 }
 
 func (m *SMA) Add(close decimal.Decimal) {
-	if len(m.values) == m.period {
-		m.values = append(m.values[:0], m.values[1:]...)
-	}
-
 	// Add value
 	m.values = append(m.values, close)
 }
@@ -38,15 +35,46 @@ func (m *SMA) RemoveLast() {
 }
 
 func (m *SMA) Avg() decimal.Decimal {
+	var ma decimal.Decimal
 	total, _ := decimal.NewFromString("0")
-	if len(m.values) != m.period {
+	if len(m.values) < m.period {
 		return NotEnoughData
 	}
 
-	for _, value := range m.values {
-		total = total.Add(value)
-	}
+	if m.exponential {
+		// Exponential Moving Average
+		periodpp := utils.IntToDecimal(m.period + 1)
+		mult := utils.StringToDecimal("2").Div(periodpp)
 
-	sma := total.Div(decimal.NewFromFloat(float64(m.period)))
-	return sma
+		var ema []decimal.Decimal
+
+		// First, get the simple moving average for the first N periods
+		for _, value := range m.values[0:m.period] {
+			total = total.Add(value)
+		}
+
+		log.Info(total.String())
+
+		// Add the initial SMA to the EMA array
+		ema = append(ema, total.Div(decimal.NewFromFloat(float64(m.period))))
+
+		// Calculate the full EMA
+		for i := m.period; i < len(m.values); i++ {
+			close := m.values[i]
+			prevEma := ema[len(ema)-1:][0]
+			newEma := close.Sub(prevEma).Mul(mult).Add(prevEma)
+			ema = append(ema, newEma)
+		}
+
+		// Grab the last EMA value
+		ma = ema[len(ema)-1:][0]
+	} else {
+		// Simple Moving Average
+		for _, value := range m.values[len(m.values)-m.period:] {
+			total = total.Add(value)
+		}
+
+		ma = total.Div(decimal.NewFromFloat(float64(m.period)))
+	}
+	return ma
 }
