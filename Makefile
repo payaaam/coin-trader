@@ -1,3 +1,6 @@
+test:
+	go test ./orders ./strategies ./cmd/cli ./charts
+
 models:
 	cd scripts && sqlboiler postgres --wipe --output ../db/models
 
