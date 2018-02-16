@@ -46,7 +46,7 @@ func (mr *MockOrderManagerMockRecorder) Setup() *gomock.Call {
 }
 
 // SetupSimulation mocks base method
-func (m *MockOrderManager) SetupSimulation(arg0 *Balance) error {
+func (m *MockOrderManager) SetupSimulation(arg0 map[string]*Balance) error {
 	ret := m.ctrl.Call(m, "SetupSimulation", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0

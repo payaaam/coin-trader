@@ -33,6 +33,7 @@ type Order struct {
 	SellPrice       null.String `boil:"sell_price" json:"sell_price,omitempty" toml:"sell_price" yaml:"sell_price,omitempty"`
 	OpenTime        int64       `boil:"open_time" json:"open_time" toml:"open_time" yaml:"open_time"`
 	CloseTime       null.Int64  `boil:"close_time" json:"close_time,omitempty" toml:"close_time" yaml:"close_time,omitempty"`
+	QuantityFilled  null.String `boil:"quantity_filled" json:"quantity_filled,omitempty" toml:"quantity_filled" yaml:"quantity_filled,omitempty"`
 
 	R *orderR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L orderL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -49,6 +50,7 @@ var OrderColumns = struct {
 	SellPrice       string
 	OpenTime        string
 	CloseTime       string
+	QuantityFilled  string
 }{
 	ID:              "id",
 	MarketID:        "market_id",
@@ -60,6 +62,7 @@ var OrderColumns = struct {
 	SellPrice:       "sell_price",
 	OpenTime:        "open_time",
 	CloseTime:       "close_time",
+	QuantityFilled:  "quantity_filled",
 }
 
 // orderR is where relationships are stored.
@@ -71,8 +74,8 @@ type orderR struct {
 type orderL struct{}
 
 var (
-	orderColumns               = []string{"id", "market_id", "type", "exchange_order_id", "limit", "quantity", "status", "sell_price", "open_time", "close_time"}
-	orderColumnsWithoutDefault = []string{"market_id", "type", "exchange_order_id", "limit", "quantity", "status", "sell_price", "open_time", "close_time"}
+	orderColumns               = []string{"id", "market_id", "type", "exchange_order_id", "limit", "quantity", "status", "sell_price", "open_time", "close_time", "quantity_filled"}
+	orderColumnsWithoutDefault = []string{"market_id", "type", "exchange_order_id", "limit", "quantity", "status", "sell_price", "open_time", "close_time", "quantity_filled"}
 	orderColumnsWithDefault    = []string{"id"}
 	orderPrimaryKeyColumns     = []string{"id"}
 )

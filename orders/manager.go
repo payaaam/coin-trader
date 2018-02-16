@@ -50,9 +50,11 @@ func (m *Manager) Setup() error {
 	return nil
 }
 
-func (m *Manager) SetupSimulation(btcBalance *Balance) error {
+func (m *Manager) SetupSimulation(balances map[string]*Balance) error {
 	m.isSimulation = true
-	m.setBalance("btc", btcBalance.Total, btcBalance.Available)
+	for currency, balance := range balances {
+		m.setBalance(currency, balance)
+	}
 	return nil
 }
 
@@ -61,6 +63,7 @@ func (m *Manager) GetBalances() map[string]*Balance {
 }
 
 func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error {
+	log.Debug("ExecuteLimitBuy")
 	balance := m.GetBalance(order.BaseCurrency).Available
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
@@ -79,6 +82,7 @@ func (m *Manager) ExecuteLimitBuy(ctx context.Context, order *LimitOrder) error 
 }
 
 func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error {
+	log.Debug("ExecuteLimitSell")
 	balance := m.GetBalance(order.MarketCurrency).Available
 	if hasAvailableFunds(balance, order) == false {
 		return ErrNotEnoughFunds
@@ -98,6 +102,7 @@ func (m *Manager) ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
 
 // Creates and executes open buy order
 func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) error {
+	log.Debug("createOpenBuyOrder")
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
 	// Create Open Order and add it to Open Orders
@@ -133,6 +138,7 @@ func (m *Manager) createOpenBuyOrder(ctx context.Context, order *LimitOrder) err
 
 // Simulates executing an open buy order. This will close it immediately
 func (m *Manager) simulateOpenBuyOrder(ctx context.Context, order *LimitOrder) error {
+	log.Debug("simulateOpenBuyOrder")
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
 	openOrder := &OpenOrder{
@@ -155,6 +161,7 @@ func (m *Manager) simulateOpenBuyOrder(ctx context.Context, order *LimitOrder) e
 
 // Creates and executes an open sell order
 func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) error {
+	log.Debug("createOpenSellOrder")
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
 	// Create Open Order
@@ -189,6 +196,7 @@ func (m *Manager) createOpenSellOrder(ctx context.Context, order *LimitOrder) er
 
 // Simulates creating an open sell order. This will close it immediately
 func (m *Manager) simulateOpenSellOrder(ctx context.Context, order *LimitOrder) error {
+	log.Debug("simulateOpenSellOrder")
 	marketKey := m.client.GetMarketKey(order.BaseCurrency, order.MarketCurrency)
 
 	// Create Open Order
@@ -213,6 +221,7 @@ func (m *Manager) simulateOpenSellOrder(ctx context.Context, order *LimitOrder) 
 
 // This function updates the internal balance from a limit order
 func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) {
+	log.Debug("updateBalanceFromOpenOrder")
 	baseBalance := m.GetBalance(order.BaseCurrency)
 	marketBalance := m.GetBalance(order.MarketCurrency)
 	originalCost := order.Limit.Mul(order.Quantity)
@@ -231,18 +240,22 @@ func (m *Manager) updateBalanceFromOpenOrder(order *OpenOrder) {
 
 	if order.Type == SellOrder {
 		// Update Market Currency Balance (ALT)
-		marketBalance.Available = marketBalance.Available.Add(originalCost)
-		marketBalance.Available = marketBalance.Available.Sub(actualCost)
-		marketBalance.Total = marketBalance.Total.Sub(actualCost)
+		marketBalance.Available = marketBalance.Available.Add(order.Quantity)
+		marketBalance.Available = marketBalance.Available.Sub(order.QuantityFilled)
+		marketBalance.Total = marketBalance.Total.Sub(order.QuantityFilled)
 
 		// Update Base Currency (BTC)
-		baseBalance.Available = baseBalance.Available.Add(order.QuantityFilled)
-		baseBalance.Total = baseBalance.Total.Add(order.QuantityFilled)
+		baseBalance.Available = baseBalance.Available.Add(actualCost)
+		baseBalance.Total = baseBalance.Total.Add(actualCost)
 	}
+
+	m.setBalance(order.MarketCurrency, marketBalance)
+	m.setBalance(order.BaseCurrency, baseBalance)
 }
 
 // Receives updated open order and updates balances accordingly
 func (m *Manager) processOrderUpdate(order *OpenOrder) error {
+	log.Debug("processOrderUpdate")
 	switch order.Status {
 	case OpenOrderStatus:
 		return nil
@@ -267,6 +280,7 @@ func (m *Manager) processOrderUpdate(order *OpenOrder) error {
 
 // Updates the balance for currency after initial order placement
 func (m *Manager) updateBalanceFromLimitOrder(orderType string, order *LimitOrder) error {
+	log.Debug("updateBalanceFromLimitOrder")
 	if orderType == BuyOrder {
 		baseCurrencyBalance := m.GetBalance(order.BaseCurrency).Available
 		orderCost := order.Limit.Mul(order.Quantity)
@@ -282,10 +296,10 @@ func (m *Manager) updateBalanceFromLimitOrder(orderType string, order *LimitOrde
 
 	if orderType == SellOrder {
 		marketCurrencyBalance := m.GetBalance(order.MarketCurrency).Available
-		orderCost := order.Limit.Mul(order.Quantity)
+		//orderCost := order.Limit.Mul(order.Quantity)
 
 		// Debit Base Currency Available
-		newBalance := marketCurrencyBalance.Sub(orderCost)
+		newBalance := marketCurrencyBalance.Sub(order.Quantity)
 
 		if newBalance.Sign() == -1 {
 			return ErrNotEnoughFunds
@@ -315,18 +329,19 @@ func (m *Manager) loadBalances() error {
 	}
 
 	for _, balance := range balances {
-		m.setBalance(balance.BaseCurrency, balance.Total, balance.Available)
+		b := &Balance{
+			Total:     balance.Total,
+			Available: balance.Available,
+		}
+		m.setBalance(balance.BaseCurrency, b)
 	}
 
 	return nil
 }
 
 // Sets available and total balance
-func (m *Manager) setBalance(marketKey string, total decimal.Decimal, available decimal.Decimal) {
-	m.Balances[utils.Normalize(marketKey)] = &Balance{
-		Total:     total,
-		Available: available,
-	}
+func (m *Manager) setBalance(marketKey string, balance *Balance) {
+	m.Balances[utils.Normalize(marketKey)] = balance
 }
 
 // Sets available balance
@@ -336,7 +351,14 @@ func (m *Manager) setAvailableBalance(marketKey string, available decimal.Decima
 
 // Get Available Balance
 func (m *Manager) GetBalance(marketKey string) *Balance {
-	return m.Balances[utils.Normalize(marketKey)]
+	b := m.Balances[utils.Normalize(marketKey)]
+	if b != nil {
+		return b
+	}
+	return &Balance{
+		Available: utils.ZeroDecimal(),
+		Total:     utils.ZeroDecimal(),
+	}
 }
 
 // Save an Order to the database

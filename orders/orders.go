@@ -12,7 +12,7 @@ import (
 
 type OrderManager interface {
 	Setup() error
-	SetupSimulation(*Balance) error
+	SetupSimulation(map[string]*Balance) error
 	GetBalance(marketKey string) *Balance
 	GetBalances() map[string]*Balance
 	ExecuteLimitSell(ctx context.Context, order *LimitOrder) error
@@ -84,6 +84,6 @@ func (o *OpenOrder) CancelOrder() {
 }
 
 type Balance struct {
-	Total     decimal.Decimal
-	Available decimal.Decimal
+	Total     decimal.Decimal `json:"total"`
+	Available decimal.Decimal `json:"available"`
 }

@@ -1,10 +1,10 @@
 package orders
 
 import (
-	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
+	"gopkg.in/volatiletech/null.v6"
 	"time"
 )
 
@@ -20,12 +20,20 @@ func hasAvailableFunds(balance decimal.Decimal, order *LimitOrder) bool {
 }
 
 func convertToOrderModel(order *OpenOrder) *models.Order {
-	return &models.Order{
+	orderModel := &models.Order{
 		Type:            order.Type,
 		Limit:           order.Limit.String(),
 		Quantity:        order.Quantity.String(),
 		ExchangeOrderID: order.ID,
-		Status:          db.OpenOrderStatus,
+		Status:          order.Status,
 		OpenTime:        time.Now().Unix(),
 	}
+
+	if order.CloseTimestamp != 0 {
+		orderModel.CloseTime = null.Int64From(order.CloseTimestamp)
+		orderModel.SellPrice = null.StringFrom(order.TradePrice.String())
+		orderModel.QuantityFilled = null.StringFrom(order.QuantityFilled.String())
+	}
+
+	return orderModel
 }
