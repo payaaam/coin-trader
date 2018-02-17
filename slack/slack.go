@@ -68,7 +68,7 @@ func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity d
 		} else {
 			emoji = ":x:"
 		}
-		message = fmt.Sprintf("%s *%s %s/%s* @ %s (%s%%)", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String(), profitLoss)
+		message = fmt.Sprintf("%s *%s %s/%s* @ %s (%s%%)", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String(), profitLoss.String())
 	} else {
 		emoji := ":new:"
 		message = fmt.Sprintf("%s *%s %s/%s* @ %s", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String())
