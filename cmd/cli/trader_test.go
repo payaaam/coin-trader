@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db/models"
@@ -11,7 +13,6 @@ import (
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
-	"testing"
 )
 
 type TraderCommandTestConfig struct {

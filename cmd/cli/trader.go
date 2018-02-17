@@ -36,9 +36,10 @@ type TraderCommand struct {
 	tickStore      db.TickStoreInterface
 	exchangeClient exchanges.Exchange
 	orderManager   orders.OrderManager
+	slackLogger    slack.Logger
 }
 
-func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange, orderManager orders.OrderManager) *TraderCommand {
+func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange, orderManager orders.OrderManager, slackLogger *slack.Logger) *TraderCommand {
 	return &TraderCommand{
 		config:         config,
 		marketStore:    marketStore,
@@ -46,6 +47,7 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 		tickStore:      tickStore,
 		exchangeClient: client,
 		orderManager:   orderManager,
+		slackLogger:    *slackLogger,
 		isSimulation:   false,
 	}
 }
@@ -53,7 +55,7 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool) {
 	log.Infof("Starting Automated Trader %s", exchange)
 	ctx := context.Background()
-	slack.Init()
+	t.slackLogger.Init("trading")
 
 	if isSimulation == true {
 		t.isSimulation = true
@@ -143,7 +145,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			slack.PostTrade("Sell", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			t.slackLogger.PostTrade("Sell", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
 		}
 		return nil
 	}
@@ -172,7 +174,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			slack.PostTrade("Buy", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			t.slackLogger.PostTrade("Buy", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
 		}
 		return nil
 	}

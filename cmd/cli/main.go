@@ -10,6 +10,7 @@ import (
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/orders"
+	"github.com/payaaam/coin-trader/slack"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -117,8 +118,9 @@ func main() {
 				orderUpdateChannel := make(chan *orders.OpenOrder)
 				orderMonitor := orders.NewMonitor(exchangeClient, 10)
 				orderManager := orders.NewManager(orderMonitor, orderUpdateChannel, exchangeClient, orderStore, marketStore)
+				slackLogger := slack.NewLogger(config.SlackToken)
 
-				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient, orderManager)
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient, orderManager, slackLogger)
 
 				traderCommand.Run(exchange, interval, isSimulation)
 				return nil
