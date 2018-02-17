@@ -11,21 +11,26 @@ import (
 
 const slackAPIToken string = "xoxp-315598160006-314865968613-314739060532-5ede8aca6ad11fcfc9cf3bdded48b9c7"
 
+type SlackLoggerInterface interface {
+	Init(channelName string)
+	PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string)
+}
+
 // Logger logs to a specified Slack channel
-type Logger struct {
+type SlackLogger struct {
 	client    *slack.Client
 	channelID string
 }
 
-// NewLogger creates a new Slack logger
-func NewLogger(slackToken string) *Logger {
-	return &Logger{
+// NewSlackLogger creates a new Slack logger
+func NewSlackLogger(slackToken string) *SlackLogger {
+	return &SlackLogger{
 		client: slack.New(slackToken),
 	}
 }
 
 // Init initializes the Slack logger to the specific channel
-func (s *Logger) Init(channelName string) {
+func (s *SlackLogger) Init(channelName string) {
 	// s.client.SetDebug(true)
 
 	channels, err := s.client.GetChannels(false)
@@ -46,7 +51,7 @@ func (s *Logger) Init(channelName string) {
 }
 
 // PostTrade logs a trade to Slack
-func (s *Logger) PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string) {
+func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string) {
 	message := fmt.Sprintf("%s %s/%s: %s at %s", action, market, base, quantity.String(), limit.String())
 	s.client.PostMessage(s.channelID, message, slack.PostMessageParameters{})
 }

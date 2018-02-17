@@ -118,7 +118,7 @@ func main() {
 				orderUpdateChannel := make(chan *orders.OpenOrder)
 				orderMonitor := orders.NewMonitor(exchangeClient, 10)
 				orderManager := orders.NewManager(orderMonitor, orderUpdateChannel, exchangeClient, orderStore, marketStore)
-				slackLogger := slack.NewLogger(config.SlackToken)
+				slackLogger := slack.NewSlackLogger(config.SlackToken)
 
 				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient, orderManager, slackLogger)
 

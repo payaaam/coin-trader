@@ -36,10 +36,10 @@ type TraderCommand struct {
 	tickStore      db.TickStoreInterface
 	exchangeClient exchanges.Exchange
 	orderManager   orders.OrderManager
-	slackLogger    slack.Logger
+	slackLogger    slack.SlackLoggerInterface
 }
 
-func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange, orderManager orders.OrderManager, slackLogger *slack.Logger) *TraderCommand {
+func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange, orderManager orders.OrderManager, slackLogger slack.SlackLoggerInterface) *TraderCommand {
 	return &TraderCommand{
 		config:         config,
 		marketStore:    marketStore,
@@ -47,7 +47,7 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 		tickStore:      tickStore,
 		exchangeClient: client,
 		orderManager:   orderManager,
-		slackLogger:    *slackLogger,
+		slackLogger:    slackLogger,
 		isSimulation:   false,
 	}
 }
@@ -145,7 +145,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			t.slackLogger.PostTrade("Sell", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			t.slackLogger.PostTrade(orders.SellOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
 		}
 		return nil
 	}
@@ -174,7 +174,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			t.slackLogger.PostTrade("Buy", limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			t.slackLogger.PostTrade(orders.BuyOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
 		}
 		return nil
 	}

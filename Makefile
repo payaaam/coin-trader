@@ -9,6 +9,7 @@ mocks: mock-db mock-exchange mock-manager mock-strategy
 mock-db:
 	mockgen -source=./db/db.go -destination=./mocks/db.go -package=mocks
 
+
 mock-exchange:
 	mockgen -source=./exchanges/exchanges.go -destination=./mocks/exchanges.go -package=mocks -imports .=github.com/payaaam/coin-trader/exchanges
 
@@ -17,6 +18,11 @@ mock-manager:
 
 mock-strategy: 
 	mockgen -source=./strategies/strategy.go -destination=./mocks/strategy.go -package=mocks
+
+mock-slack:
+	mockgen -source=./slack/slack.go -destination=./mocks/slack.go -package=mocks
+
+
 
 cli:
 	go build -o bin/cli cmd/cli/*.go
