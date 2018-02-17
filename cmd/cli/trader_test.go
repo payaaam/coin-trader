@@ -1,5 +1,7 @@
 package main
 
+// TODO: Finish out for errors
+
 import (
 	"errors"
 	"testing"
