@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
 	PostgresConn string
 	Bittrex      *BittrexConfig
 	LogLevel     log.Level
+	SlackToken   string
 }
 
 type BittrexConfig struct {
@@ -29,10 +31,13 @@ func NewConfig() *Config {
 	// Setup Bittrex Client
 	bittrexConfig := loadBittrexConfig()
 
+	slackToken := os.Getenv("SLACK_TOKEN")
+
 	return &Config{
 		PostgresConn: postgresConn,
 		Bittrex:      bittrexConfig,
 		LogLevel:     logLevel,
+		SlackToken:   slackToken,
 	}
 }
 
