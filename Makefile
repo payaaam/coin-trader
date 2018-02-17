@@ -37,3 +37,6 @@ setup: create-db setup-db cli
 
 migrate-production:
 	sql-migrate up -config=scripts/dbconfig.yml -env=production
+
+upload-cli:
+	scp bin/cli payam@ec2-35-170-55-23.compute-1.amazonaws.com:/home/payam/cli-02-01
