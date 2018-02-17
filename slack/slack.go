@@ -2,6 +2,10 @@ package slack
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/payaaam/coin-trader/orders"
+	"github.com/payaaam/coin-trader/utils"
 
 	"github.com/shopspring/decimal"
 
@@ -52,6 +56,22 @@ func (s *SlackLogger) Init(channelName string) {
 
 // PostTrade logs a trade to Slack
 func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string) {
-	message := fmt.Sprintf("%s %s/%s: %s at %s", action, market, base, quantity.String(), limit.String())
+	var emoji string
+	var message string
+	if action == orders.SellOrder {
+		// Calculate profit/loss
+		oneHundo := utils.StringToDecimal("100")
+		buyPrice := utils.StringToDecimal("0.01").Div(quantity)
+		profitLoss := limit.Sub(buyPrice).Div(buyPrice).Mul(oneHundo).Round(3)
+		if profitLoss.Sign() > 0 {
+			emoji = ":white_check_mark:"
+		} else {
+			emoji = ":x:"
+		}
+		message = fmt.Sprintf("%s *%s %s/%s* @ %s (%s%%)", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String(), profitLoss)
+	} else {
+		emoji := ":new:"
+		message = fmt.Sprintf("%s *%s %s/%s* @ %s", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String())
+	}
 	s.client.PostMessage(s.channelID, message, slack.PostMessageParameters{})
 }
