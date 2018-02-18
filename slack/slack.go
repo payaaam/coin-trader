@@ -9,8 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const slackAPIToken string = "xoxp-315598160006-314865968613-314739060532-5ede8aca6ad11fcfc9cf3bdded48b9c7"
-
 type SlackLoggerInterface interface {
 	Init(channelName string)
 	PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string)
