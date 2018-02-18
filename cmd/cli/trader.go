@@ -27,6 +27,7 @@ const DefaultPricePadding = "1.01"
 const DefaultLimit = "0.01"
 const DefaultQuantity = "1"
 const EveryTenMinutes = 10
+const SlackChannel = "trades"
 
 type TraderCommand struct {
 	config         *Config
@@ -55,7 +56,10 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool) {
 	log.Infof("Starting Automated Trader %s", exchange)
 	ctx := context.Background()
-	t.slackLogger.Init("trading")
+	err := t.slackLogger.Init(SlackChannel)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if isSimulation == true {
 		t.isSimulation = true
@@ -145,7 +149,10 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			t.slackLogger.PostTrade(orders.SellOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			err = t.slackLogger.PostTrade(orders.SellOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -174,7 +181,10 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			t.slackLogger.PostTrade(orders.BuyOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			err = t.slackLogger.PostTrade(orders.BuyOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}

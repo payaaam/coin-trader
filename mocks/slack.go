@@ -34,8 +34,10 @@ func (m *MockSlackLoggerInterface) EXPECT() *MockSlackLoggerInterfaceMockRecorde
 }
 
 // Init mocks base method
-func (m *MockSlackLoggerInterface) Init(channelName string) {
-	m.ctrl.Call(m, "Init", channelName)
+func (m *MockSlackLoggerInterface) Init(channelName string) error {
+	ret := m.ctrl.Call(m, "Init", channelName)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Init indicates an expected call of Init
@@ -44,8 +46,10 @@ func (mr *MockSlackLoggerInterfaceMockRecorder) Init(channelName interface{}) *g
 }
 
 // PostTrade mocks base method
-func (m *MockSlackLoggerInterface) PostTrade(action string, limit, quantity decimal.Decimal, base, market string) {
-	m.ctrl.Call(m, "PostTrade", action, limit, quantity, base, market)
+func (m *MockSlackLoggerInterface) PostTrade(action string, limit, quantity decimal.Decimal, base, market string) error {
+	ret := m.ctrl.Call(m, "PostTrade", action, limit, quantity, base, market)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // PostTrade indicates an expected call of PostTrade

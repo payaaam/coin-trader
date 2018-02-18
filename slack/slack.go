@@ -10,12 +10,11 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/nlopes/slack"
-	log "github.com/sirupsen/logrus"
 )
 
 type SlackLoggerInterface interface {
-	Init(channelName string)
-	PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string)
+	Init(channelName string) error
+	PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string) error
 }
 
 // Logger logs to a specified Slack channel
@@ -32,12 +31,10 @@ func NewSlackLogger(slackToken string) *SlackLogger {
 }
 
 // Init initializes the Slack logger to the specific channel
-func (s *SlackLogger) Init(channelName string) {
-	// s.client.SetDebug(true)
-
+func (s *SlackLogger) Init(channelName string) error {
 	channels, err := s.client.GetChannels(false)
 	if err != nil {
-		log.Error(err)
+		return err
 	}
 
 	for _, channel := range channels {
@@ -48,12 +45,14 @@ func (s *SlackLogger) Init(channelName string) {
 
 	_, _, err = s.client.PostMessage(s.channelID, "Bot is online.", slack.PostMessageParameters{})
 	if err != nil {
-		log.Error(err)
+		return err
 	}
+
+	return nil
 }
 
 // PostTrade logs a trade to Slack
-func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string) {
+func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity decimal.Decimal, base string, market string) error {
 	var emoji string
 	var message string
 	if action == orders.SellOrder {
@@ -71,5 +70,10 @@ func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity d
 		emoji := ":new:"
 		message = fmt.Sprintf("%s *%s %s/%s* @ %s", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String())
 	}
-	s.client.PostMessage(s.channelID, message, slack.PostMessageParameters{})
+	_, _, err := s.client.PostMessage(s.channelID, message, slack.PostMessageParameters{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
