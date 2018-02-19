@@ -10,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/nlopes/slack"
+	//log "github.com/sirupsen/logrus"
 )
 
 type SlackLoggerInterface interface {
@@ -65,12 +66,23 @@ func (s *SlackLogger) PostTrade(action string, limit decimal.Decimal, quantity d
 		} else {
 			emoji = ":x:"
 		}
-		message = fmt.Sprintf("%s *%s %s/%s* @ %s (%s%%)", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String(), profitLoss.String())
+		message = fmt.Sprintf("%s *`%s`* - *%s/%s* - %s @ %s - *(%s%%)*", emoji, strings.ToUpper(action), strings.ToUpper(market), strings.ToUpper(base), quantity.String(), limit.String(), profitLoss.String())
 	} else {
-		emoji := ":new:"
-		message = fmt.Sprintf("%s *%s %s/%s* @ %s", emoji, action, strings.ToUpper(market), strings.ToUpper(base), limit.String())
+		emoji := ":shopping_bags:"
+		message = fmt.Sprintf("%s *`%s`* - *%s/%s* - %s @ %s", emoji, strings.ToUpper(action), strings.ToUpper(market), strings.ToUpper(base), quantity.String(), limit.String())
 	}
-	_, _, err := s.client.PostMessage(s.channelID, message, slack.PostMessageParameters{})
+
+	params := slack.PostMessageParameters{
+		Attachments: []slack.Attachment{
+			{
+				Color:      "good",
+				Pretext:    message,
+				MarkdownIn: []string{"pretext"},
+			},
+		},
+	}
+
+	_, _, err := s.client.PostMessage(s.channelID, "", params)
 	if err != nil {
 		return err
 	}
