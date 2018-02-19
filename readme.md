@@ -40,6 +40,12 @@ Port: 5432
 Database: postgres
 ```
 
+**Running Tests**
+
+```bash
+$ make test
+```
+
 ## Database
 
 **Download Mirgation Tool**
@@ -116,3 +122,18 @@ $ bin/cli ticker --exchange=bittrex
 ```
 
 We collect hourly ticker information from bittrex due to API Rate Limit Restrictions. Then, every morning at 00:10 UTC, we process the last 24 hourly ticks and generate a 24H candle. This data is all written to RDS.
+
+
+## Deploy
+
+You must have AWS access and have your public key setup on the server to deploy. 
+
+To deploy...
+
+```bash
+# If your local username is different than your server username
+$ DEPLOY_USER=chris make deploy
+
+# If your local username is the same as the server
+$ make deploy
+```
