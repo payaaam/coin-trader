@@ -63,7 +63,7 @@ func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool)
 
 	if isSimulation == true {
 		t.isSimulation = true
-		bMap, err := loadBalancesFromFile()
+		bMap, err := loadBalancesFromFile(t.config.BalancePath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -181,7 +181,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			err = t.slackLogger.PostTrade(orders.BuyOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			err = t.slackLogger.PostTrade(orders.BuyOrder, limit, quantity, market.BaseCurrency, market.MarketCurrency)
 			if err != nil {
 				return err
 			}
@@ -201,7 +201,7 @@ func (t *TraderCommand) printBalance(currency string) {
 }
 
 func (t *TraderCommand) saveBalancesToFile() {
-	err := writeBalancesToFile(t.orderManager.GetBalances())
+	err := writeBalancesToFile(t.orderManager.GetBalances(), t.config.BalancePath)
 	if err != nil {
 		log.Errorf("Error writing balance file: %v", err)
 	}
@@ -267,10 +267,10 @@ func getOrderQuantity(ticker *exchanges.Ticker, btcMax decimal.Decimal) decimal.
 	return btcMax.Div(ticker.Ask)
 }
 
-func loadBalancesFromFile() (map[string]*orders.Balance, error) {
+func loadBalancesFromFile(balancePath string) (map[string]*orders.Balance, error) {
 	var balanceMap map[string]*orders.Balance
 
-	balanceData, err := ioutil.ReadFile(SimulationBalanceFile)
+	balanceData, err := ioutil.ReadFile(balancePath)
 	if err != nil {
 		if os.IsNotExist(err) == false {
 			log.Error(err)
@@ -279,7 +279,7 @@ func loadBalancesFromFile() (map[string]*orders.Balance, error) {
 
 		// Create new balance file
 		bMap := defaultBalance()
-		err = writeBalancesToFile(bMap)
+		err = writeBalancesToFile(bMap, balancePath)
 		if err != nil {
 			return nil, err
 		}
@@ -303,13 +303,13 @@ func defaultBalance() map[string]*orders.Balance {
 	return balanceMap
 }
 
-func writeBalancesToFile(bMap map[string]*orders.Balance) error {
+func writeBalancesToFile(bMap map[string]*orders.Balance, balancePath string) error {
 	data, err := json.Marshal(bMap)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(SimulationBalanceFile, data, 0644)
+	err = ioutil.WriteFile(balancePath, data, 0644)
 	if err != nil {
 		return err
 	}
