@@ -181,7 +181,7 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
-			err = t.slackLogger.PostTrade(orders.BuyOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			err = t.slackLogger.PostTrade(orders.BuyOrder, limit, quantity, market.BaseCurrency, market.MarketCurrency)
 			if err != nil {
 				return err
 			}
