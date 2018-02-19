@@ -2,14 +2,19 @@ package main
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
+
+const BalanceFile = "balance.json"
 
 type Config struct {
 	PostgresConn string
 	Bittrex      *BittrexConfig
 	LogLevel     log.Level
+	SlackToken   string
+	BalancePath  string
 }
 
 type BittrexConfig struct {
@@ -29,10 +34,18 @@ func NewConfig() *Config {
 	// Setup Bittrex Client
 	bittrexConfig := loadBittrexConfig()
 
+	// Slack
+	slackToken := os.Getenv("SLACK_TOKEN")
+
+	// Balance Path
+	balancePath := loadBalancePath()
+
 	return &Config{
 		PostgresConn: postgresConn,
 		Bittrex:      bittrexConfig,
 		LogLevel:     logLevel,
+		SlackToken:   slackToken,
+		BalancePath:  balancePath,
 	}
 }
 
@@ -49,6 +62,14 @@ func loadBittrexConfig() *BittrexConfig {
 	return nil
 }
 
+func loadBalancePath() string {
+	balancePath := os.Getenv("BALANCE_PATH")
+	if balancePath == "" {
+		balancePath = "."
+	}
+
+	return fmt.Sprintf("%s/%s", balancePath, BalanceFile)
+}
 func loadPostgres() string {
 	postgresConn := os.Getenv("POSTGRES_CONN")
 	if postgresConn != "" {

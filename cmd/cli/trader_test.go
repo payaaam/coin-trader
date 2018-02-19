@@ -4,6 +4,8 @@ package main
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db/models"
@@ -13,7 +15,6 @@ import (
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
-	"testing"
 )
 
 type TraderCommandTestConfig struct {
@@ -24,6 +25,7 @@ type TraderCommandTestConfig struct {
 	Exchange     *mocks.MockExchange
 	OrderManager *orders.MockOrderManager
 	Strategy     *mocks.MockStrategy
+	Slack        *mocks.MockSlackLoggerInterface
 }
 
 func newTraderTestConfig(t *testing.T) *TraderCommandTestConfig {
@@ -37,6 +39,7 @@ func newTraderTestConfig(t *testing.T) *TraderCommandTestConfig {
 		TickStore:    mocks.NewMockTickStoreInterface(mockCtrl),
 		OrderManager: orders.NewMockOrderManager(mockCtrl),
 		Strategy:     mocks.NewMockStrategy(mockCtrl),
+		Slack:        mocks.NewMockSlackLoggerInterface(mockCtrl),
 	}
 }
 
@@ -48,7 +51,7 @@ var timestampTwo = int64(2)
 func TestTradeBuySuccess(t *testing.T) {
 	ctx := context.Background()
 	testConfig := newTraderTestConfig(t)
-	toTest := NewTraderCommand(nil, testConfig.MarketStore, testConfig.ChartStore, testConfig.TickStore, testConfig.Exchange, testConfig.OrderManager)
+	toTest := NewTraderCommand(nil, testConfig.MarketStore, testConfig.ChartStore, testConfig.TickStore, testConfig.Exchange, testConfig.OrderManager, testConfig.Slack)
 
 	m := &models.Market{
 		MarketCurrency: "ltc",
@@ -78,6 +81,7 @@ func TestTradeBuySuccess(t *testing.T) {
 		BaseCurrency:   m.BaseCurrency,
 	}
 	testConfig.OrderManager.EXPECT().ExecuteLimitBuy(ctx, sellOrder).Return(nil)
+	testConfig.Slack.EXPECT().PostTrade("buy", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 
 	err := toTest.trade(ctx, m, testConfig.Strategy, testExchange, testInterval)
 	assert.Nil(t, err, "should not error on decide call")
@@ -86,7 +90,7 @@ func TestTradeBuySuccess(t *testing.T) {
 func TestTradeBuyFail(t *testing.T) {
 	ctx := context.Background()
 	testConfig := newTraderTestConfig(t)
-	toTest := NewTraderCommand(nil, testConfig.MarketStore, testConfig.ChartStore, testConfig.TickStore, testConfig.Exchange, testConfig.OrderManager)
+	toTest := NewTraderCommand(nil, testConfig.MarketStore, testConfig.ChartStore, testConfig.TickStore, testConfig.Exchange, testConfig.OrderManager, testConfig.Slack)
 
 	m := &models.Market{
 		MarketCurrency: "ltc",
@@ -108,6 +112,7 @@ func TestTradeBuyFail(t *testing.T) {
 		Last: utils.StringToDecimal("1"),
 	}
 	testConfig.Exchange.EXPECT().GetTicker(m.MarketKey).Return(ticker, nil)
+	testConfig.Slack.EXPECT().PostTrade("buy", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 
 	sellOrder := &orders.LimitOrderMatcher{
 		Limit:          utils.StringToDecimal("1.01"),

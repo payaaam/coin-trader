@@ -3,14 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os"
+
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/orders"
+	"github.com/payaaam/coin-trader/slack"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"os"
 )
 
 func main() {
@@ -116,8 +118,9 @@ func main() {
 				orderUpdateChannel := make(chan *orders.OpenOrder)
 				orderMonitor := orders.NewMonitor(exchangeClient, 10)
 				orderManager := orders.NewManager(orderMonitor, orderUpdateChannel, exchangeClient, orderStore, marketStore)
+				slackLogger := slack.NewSlackLogger(config.SlackToken)
 
-				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient, orderManager)
+				traderCommand := NewTraderCommand(config, marketStore, chartStore, tickStore, exchangeClient, orderManager, slackLogger)
 
 				traderCommand.Run(exchange, interval, isSimulation)
 				return nil

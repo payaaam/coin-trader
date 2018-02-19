@@ -2,22 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"strings"
+	"time"
+
 	_ "github.com/lib/pq"
 	"github.com/payaaam/coin-trader/charts"
 	"github.com/payaaam/coin-trader/db"
 	"github.com/payaaam/coin-trader/db/models"
 	"github.com/payaaam/coin-trader/exchanges"
 	"github.com/payaaam/coin-trader/orders"
+	"github.com/payaaam/coin-trader/slack"
 	"github.com/payaaam/coin-trader/strategies"
 	"github.com/payaaam/coin-trader/utils"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	"io/ioutil"
-	"os"
-	"os/signal"
-	"strings"
-	"time"
 )
 
 const SimulationBalanceFile = "./balance.json"
@@ -25,6 +27,7 @@ const DefaultPricePadding = "1.01"
 const DefaultLimit = "0.01"
 const DefaultQuantity = "1"
 const EveryTenMinutes = 10
+const SlackChannel = "trades"
 
 type TraderCommand struct {
 	config         *Config
@@ -34,9 +37,10 @@ type TraderCommand struct {
 	tickStore      db.TickStoreInterface
 	exchangeClient exchanges.Exchange
 	orderManager   orders.OrderManager
+	slackLogger    slack.SlackLoggerInterface
 }
 
-func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange, orderManager orders.OrderManager) *TraderCommand {
+func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chartStore db.ChartStoreInterface, tickStore db.TickStoreInterface, client exchanges.Exchange, orderManager orders.OrderManager, slackLogger slack.SlackLoggerInterface) *TraderCommand {
 	return &TraderCommand{
 		config:         config,
 		marketStore:    marketStore,
@@ -44,6 +48,7 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 		tickStore:      tickStore,
 		exchangeClient: client,
 		orderManager:   orderManager,
+		slackLogger:    slackLogger,
 		isSimulation:   false,
 	}
 }
@@ -51,10 +56,14 @@ func NewTraderCommand(config *Config, marketStore db.MarketStoreInterface, chart
 func (t *TraderCommand) Run(exchange string, interval string, isSimulation bool) {
 	log.Infof("Starting Automated Trader %s", exchange)
 	ctx := context.Background()
+	err := t.slackLogger.Init(SlackChannel)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if isSimulation == true {
 		t.isSimulation = true
-		bMap, err := loadBalancesFromFile()
+		bMap, err := loadBalancesFromFile(t.config.BalancePath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -140,6 +149,10 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			if err != nil {
 				return err
 			}
+			err = t.slackLogger.PostTrade(orders.SellOrder, limit, altBalance, market.BaseCurrency, market.MarketCurrency)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -167,7 +180,10 @@ func (t *TraderCommand) trade(ctx context.Context, market *models.Market, strate
 			err = t.orderManager.ExecuteLimitBuy(ctx, newBuyOrder)
 			if err != nil {
 				return err
-
+			}
+			err = t.slackLogger.PostTrade(orders.BuyOrder, limit, quantity, market.BaseCurrency, market.MarketCurrency)
+			if err != nil {
+				return err
 			}
 		}
 		return nil
@@ -185,7 +201,7 @@ func (t *TraderCommand) printBalance(currency string) {
 }
 
 func (t *TraderCommand) saveBalancesToFile() {
-	err := writeBalancesToFile(t.orderManager.GetBalances())
+	err := writeBalancesToFile(t.orderManager.GetBalances(), t.config.BalancePath)
 	if err != nil {
 		log.Errorf("Error writing balance file: %v", err)
 	}
@@ -251,10 +267,10 @@ func getOrderQuantity(ticker *exchanges.Ticker, btcMax decimal.Decimal) decimal.
 	return btcMax.Div(ticker.Ask)
 }
 
-func loadBalancesFromFile() (map[string]*orders.Balance, error) {
+func loadBalancesFromFile(balancePath string) (map[string]*orders.Balance, error) {
 	var balanceMap map[string]*orders.Balance
 
-	balanceData, err := ioutil.ReadFile(SimulationBalanceFile)
+	balanceData, err := ioutil.ReadFile(balancePath)
 	if err != nil {
 		if os.IsNotExist(err) == false {
 			log.Error(err)
@@ -263,7 +279,7 @@ func loadBalancesFromFile() (map[string]*orders.Balance, error) {
 
 		// Create new balance file
 		bMap := defaultBalance()
-		err = writeBalancesToFile(bMap)
+		err = writeBalancesToFile(bMap, balancePath)
 		if err != nil {
 			return nil, err
 		}
@@ -287,13 +303,13 @@ func defaultBalance() map[string]*orders.Balance {
 	return balanceMap
 }
 
-func writeBalancesToFile(bMap map[string]*orders.Balance) error {
+func writeBalancesToFile(bMap map[string]*orders.Balance, balancePath string) error {
 	data, err := json.Marshal(bMap)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(SimulationBalanceFile, data, 0644)
+	err = ioutil.WriteFile(balancePath, data, 0644)
 	if err != nil {
 		return err
 	}

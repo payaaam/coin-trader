@@ -4,19 +4,8 @@ test:
 models:
 	cd scripts && sqlboiler postgres --wipe --output ../db/models
 
-mocks: mock-db mock-exchange mock-manager mock-strategy
-
-mock-db:
-	mockgen -source=./db/db.go -destination=./mocks/db.go -package=mocks
-
-mock-exchange:
-	mockgen -source=./exchanges/exchanges.go -destination=./mocks/exchanges.go -package=mocks -imports .=github.com/payaaam/coin-trader/exchanges
-
-mock-manager: 
-	mockgen -source=./orders/orders.go -destination=./orders/orders_mock.go -package=orders
-
-mock-strategy: 
-	mockgen -source=./strategies/strategy.go -destination=./mocks/strategy.go -package=mocks
+mocks:
+	./scripts/generate-mocks.sh
 
 cli:
 	go build -o bin/cli cmd/cli/*.go
@@ -37,3 +26,11 @@ setup: create-db setup-db cli
 
 migrate-production:
 	sql-migrate up -config=scripts/dbconfig.yml -env=production
+
+upload-cli:
+	scp bin/cli payam@ec2-35-170-55-23.compute-1.amazonaws.com:/home/payam/cli-02-01
+
+deploy:
+	./scripts/deploy.sh
+
+.PHONY: mocks
