@@ -17,7 +17,7 @@ setup-db: create-db
 	sql-migrate up -config=scripts/dbconfig.yml
 
 teardown-db:
-	sql-migrate down -config=scripts/dbconfig.yml
+	sql-migrate down -config=scripts/dbconfig.yml --limit=2
 
 create-db:
 	psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'coins'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE coins"
